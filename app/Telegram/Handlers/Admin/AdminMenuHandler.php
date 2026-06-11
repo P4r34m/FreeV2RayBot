@@ -1,0 +1,38 @@
+<?php
+
+namespace App\Telegram\Handlers\Admin;
+
+use App\Telegram\Reply;
+use SergiX44\Nutgram\Nutgram;
+use SergiX44\Nutgram\Telegram\Types\Keyboard\InlineKeyboardButton as Btn;
+use SergiX44\Nutgram\Telegram\Types\Keyboard\InlineKeyboardMarkup;
+
+/** Admin home (callback: admin, command: /admin). */
+class AdminMenuHandler
+{
+    public function __invoke(Nutgram $bot): void
+    {
+        Reply::toast($bot);
+
+        $panelUrl = rtrim((string) config('app.url'), '/').'/admin';
+
+        $kb = InlineKeyboardMarkup::make()
+            ->addRow(Btn::make('📊 آمار', callback_data: 'admin:stats'))
+            ->addRow(
+                Btn::make('⚙️ تنظیمات', callback_data: 'admin:settings'),
+                Btn::make('📡 کانال‌های اجباری', callback_data: 'admin:channels'),
+            )
+            ->addRow(
+                Btn::make('⛔️ مدیریت کاربران', callback_data: 'admin:users'),
+                Btn::make('📢 پیام همگانی', callback_data: 'admin:broadcast'),
+            )
+            ->addRow(Btn::make('🌐 پنل وب (مدیریت کامل و گزارشات)', url: $panelUrl))
+            ->addRow(Btn::make('🔙 بازگشت', callback_data: 'menu'));
+
+        Reply::screen(
+            $bot,
+            "⚙️ <b>پنل مدیریت</b>\n\nتنظیمات سریع از همین‌جا در دسترس است؛ مدیریت کامل پنل‌ها/پلن‌ها/قوانین و گزارش‌ها در «پنل وب».",
+            $kb,
+        );
+    }
+}

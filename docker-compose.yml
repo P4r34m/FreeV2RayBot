@@ -1,0 +1,94 @@
+services:
+  # One-shot: migrations + cache warmup. Other services wait for it.
+  init:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    image: freev2ray-app
+    env_file: .env
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    command: >
+      sh -c "php artisan migrate --force --seed &&
+             php artisan storage:link || true &&
+             php artisan config:cache &&
+             php artisan route:cache &&
+             php artisan filament:cache-components"
+    restart: "no"
+
+  # Web server (FrankenPHP) — serves the Filament panel and the Telegram webhook.
+  web:
+    image: freev2ray-app
+    env_file: .env
+    environment:
+      SERVER_NAME: ${SERVER_NAME:-localhost}
+    depends_on:
+      init:
+        condition: service_completed_successfully
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - storage:/app/storage
+      - caddy_data:/data
+      - caddy_config:/config
+    restart: unless-stopped
+
+  # Queue worker — config issuance, broadcasts, referral rewards.
+  queue:
+    image: freev2ray-app
+    env_file: .env
+    depends_on:
+      init:
+        condition: service_completed_successfully
+    command: php artisan queue:work --queue=default --tries=3 --max-time=3600 --sleep=1
+    volumes:
+      - storage:/app/storage
+    restart: unless-stopped
+
+  # Scheduler — expiry, usage sync, panel health checks.
+  scheduler:
+    image: freev2ray-app
+    env_file: .env
+    depends_on:
+      init:
+        condition: service_completed_successfully
+    command: php artisan schedule:work
+    volumes:
+      - storage:/app/storage
+    restart: unless-stopped
+
+  mysql:
+    image: mysql:8.0
+    environment:
+      MYSQL_DATABASE: ${DB_DATABASE:-freev2ray}
+      MYSQL_USER: ${DB_USERNAME:-freev2ray}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-secret}
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-rootsecret}
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-p${DB_ROOT_PASSWORD:-rootsecret}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+
+volumes:
+  mysql_data:
+  redis_data:
+  storage:
+  caddy_data:
+  caddy_config:

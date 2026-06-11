@@ -1,0 +1,20 @@
+{
+	# FrankenPHP server. Auto-HTTPS kicks in when SERVER_NAME is a real domain.
+	frankenphp
+	order php_server before file_server
+}
+
+{$SERVER_NAME:localhost} {
+	root * /app/public
+	encode zstd br gzip
+
+	# Serve the Laravel front controller.
+	php_server
+
+	# Basic security headers.
+	header {
+		-Server
+		X-Content-Type-Options nosniff
+		X-Frame-Options DENY
+	}
+}
