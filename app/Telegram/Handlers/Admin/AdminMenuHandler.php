@@ -2,6 +2,8 @@
 
 namespace App\Telegram\Handlers\Admin;
 
+use App\Models\Setting;
+use App\Support\SettingKey;
 use App\Telegram\Reply;
 use SergiX44\Nutgram\Nutgram;
 use SergiX44\Nutgram\Telegram\Types\Keyboard\InlineKeyboardButton as Btn;
@@ -15,8 +17,11 @@ class AdminMenuHandler
         Reply::toast($bot);
 
         $panelUrl = rtrim((string) config('app.url'), '/').'/admin';
+        $on = Setting::bool(SettingKey::BOT_ENABLED, true);
+        $power = $on ? '🟢 روشن — برای خاموش‌کردن بزنید' : '🔴 خاموش — برای روشن‌کردن بزنید';
 
         $kb = InlineKeyboardMarkup::make()
+            ->addRow(Btn::make("🤖 وضعیت ربات: {$power}", callback_data: 'admin:botpower'))
             ->addRow(Btn::make('📊 آمار', callback_data: 'admin:stats'))
             ->addRow(
                 Btn::make('⚙️ تنظیمات', callback_data: 'admin:settings'),

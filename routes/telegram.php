@@ -4,6 +4,7 @@
 
 use App\Telegram\Handlers\Admin\AdminAddChannelHandler;
 use App\Telegram\Handlers\Admin\AdminBlockHandler;
+use App\Telegram\Handlers\Admin\AdminBotPowerHandler;
 use App\Telegram\Handlers\Admin\AdminBroadcastHandler;
 use App\Telegram\Handlers\Admin\AdminChannelsHandler;
 use App\Telegram\Handlers\Admin\AdminDeliveryHandler;
@@ -70,6 +71,7 @@ $bot->group(function (Nutgram $bot) {
     $bot->onCallbackQueryData(Keyboards::CB_CHECK_JOIN, CheckJoinHandler::class);
 
     /* ------------------------- Admin callbacks ------------------------ */
+    $bot->onCallbackQueryData('admin:botpower', AdminBotPowerHandler::class)->middleware(EnsureAdmin::class);
     $bot->onCallbackQueryData('admin:stats', AdminStatsHandler::class)->middleware(EnsureAdmin::class);
     $bot->onCallbackQueryData('admin:settings', AdminSettingsHandler::class)->middleware(EnsureAdmin::class);
     $bot->onCallbackQueryData('admin:toggle:{key}', AdminToggleHandler::class)->middleware(EnsureAdmin::class);

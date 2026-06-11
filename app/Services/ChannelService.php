@@ -11,9 +11,9 @@ use SergiX44\Nutgram\Telegram\Types\Message\MessageOriginChannel;
 use Throwable;
 
 /**
- * Builds a required channel from a forwarded message: extracts the source
- * channel id, then (if the bot is admin) mints a dedicated invite link whose
- * joins can be attributed for stats.
+ * Resolves a channel from a forwarded message. The admin supplies the invite
+ * link themselves (the bot does NOT create one); join analytics still work
+ * because chat_member updates report whichever link a user joined through.
  */
 class ChannelService
 {
@@ -32,51 +32,47 @@ class ChannelService
     }
 
     /**
-     * Register (or update) a required channel from the forwarded message.
+     * Extract channel identity from a forwarded message.
+     *
+     * @return array{chat_id: string, title: string, username: ?string, is_private: bool}
      *
      * @throws RuntimeException when the message isn't from a channel
      */
-    public function addFromForward(Nutgram $bot, ?Message $message): RequiredChannel
+    public function extract(?Message $message): array
     {
         $chat = $this->channelFromMessage($message);
 
-        // isChannel() is a safe strict comparison (Chat::$type is ChatType|string).
         if (! $chat || ! $chat->isChannel()) {
             throw new RuntimeException('پیام باید از یک کانال فوروارد شود.');
         }
 
-        $username = $chat->username;
-        $isPrivate = $username === null;
+        return [
+            'chat_id' => (string) $chat->id,
+            'title' => $chat->title ?? 'کانال',
+            'username' => $chat->username,
+            'is_private' => $chat->username === null,
+        ];
+    }
 
-        [$inviteLink, $linkName] = $this->makeInviteLink($bot, $chat);
-
+    /**
+     * Persist (or update) a required channel with an admin-supplied invite link.
+     * Falls back to the public username link when no link is given.
+     *
+     * @param  array{chat_id: string, title: string, username: ?string, is_private: bool}  $data
+     */
+    public function save(array $data, ?string $inviteLink): RequiredChannel
+    {
         return RequiredChannel::updateOrCreate(
-            ['chat_id' => (string) $chat->id],
+            ['chat_id' => $data['chat_id']],
             [
-                'title' => $chat->title ?? 'کانال',
-                'username' => $username,
-                'is_private' => $isPrivate,
-                'invite_link' => $inviteLink ?? ($username ? 'https://t.me/'.$username : null),
-                'invite_link_name' => $linkName,
+                'title' => $data['title'],
+                'username' => $data['username'],
+                'is_private' => $data['is_private'],
+                'invite_link' => $inviteLink
+                    ?: ($data['username'] ? 'https://t.me/'.$data['username'] : null),
                 'is_active' => true,
             ],
         );
-    }
-
-    /** @return array{0: ?string, 1: ?string} [inviteLink, name] */
-    protected function makeInviteLink(Nutgram $bot, Chat $chat): array
-    {
-        $name = 'FreeV2RayBot-'.substr((string) abs($chat->id), -6);
-
-        try {
-            $link = $bot->createChatInviteLink(chat_id: $chat->id, name: $name);
-
-            return [$link?->invite_link, $name];
-        } catch (Throwable) {
-            // Bot is not admin / lacks can_invite_users. Public channels still work
-            // via the username link; private channels will need the bot promoted.
-            return [null, null];
-        }
     }
 
     /** Refresh the cached member count for a channel. */
