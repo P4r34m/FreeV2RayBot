@@ -37,21 +37,18 @@ class DatabaseSeeder extends Seeder
         }
     }
 
-    /** Default report event => topic rows (thread ids set later by the admin). */
+    /**
+     * Default report event => topic rows. Titles carry the FreeBot brand prefix;
+     * thread ids are filled in when the bot auto-creates the forum topics (see
+     * App\Services\ReportTopicProvisioner) after the reports group is configured.
+     */
     protected function seedReportTopics(): void
     {
-        $events = [
-            'new_user' => 'کاربر جدید',
-            'new_config' => 'کانفیگ جدید',
-            'renew' => 'تمدید',
-            'referral' => 'رفرال',
-            'channel_join' => 'عضویت کانال',
-            'blocked' => 'بلاک',
-            'error' => 'خطا',
-        ];
-
-        foreach ($events as $event => $title) {
-            \App\Models\ReportTopic::firstOrCreate(['event' => $event], ['title' => $title]);
+        foreach (array_keys(\App\Models\ReportTopic::defaults()) as $event) {
+            \App\Models\ReportTopic::firstOrCreate(
+                ['event' => $event],
+                ['title' => \App\Models\ReportTopic::brandedName($event)],
+            );
         }
     }
 

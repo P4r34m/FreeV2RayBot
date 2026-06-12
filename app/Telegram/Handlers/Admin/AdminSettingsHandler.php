@@ -35,6 +35,7 @@ class AdminSettingsHandler
             ->addRow(Btn::make('⌨️ نوع دکمه‌ها: '.(\App\Telegram\Keyboards::mode() === 'reply' ? 'کیبوردی' : 'شیشه‌ای'), callback_data: 'admin:kbmode'))
             ->addRow(Btn::make('🔐 مسیر (path) پنل وب: /'.\App\Support\PanelConfig::path(), callback_data: 'admin:setpath'))
             ->addRow(Btn::make('📨 تنظیم گروه گزارشات', callback_data: 'admin:setgroup'))
+            ->addRow(Btn::make('🧵 ساخت تاپیک‌های گزارش', callback_data: 'admin:maketopics'))
             ->addRow(Btn::make('🔙 بازگشت', callback_data: 'admin'));
 
         Reply::screen($bot, "⚙️ <b>تنظیمات سریع</b>\nبرای روشن/خاموش‌کردن روی هر مورد بزنید:", $kb);

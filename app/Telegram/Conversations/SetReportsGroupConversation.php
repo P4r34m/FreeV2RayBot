@@ -52,6 +52,12 @@ class SetReportsGroupConversation extends Conversation
         Setting::put(SettingKey::REPORTS_ENABLED, true);
 
         $bot->sendMessage("✅ گروه گزارشات تنظیم شد: <code>{$groupId}</code>\nگزارش‌دهی فعال شد.", parse_mode: 'HTML');
+
+        // Auto-create the FreeBot-branded forum topics and wire up their thread ids.
+        $provisioner = app(\App\Services\ReportTopicProvisioner::class);
+        $result = $provisioner->provision($bot, (string) $groupId);
+        $bot->sendMessage($provisioner->summary($result), parse_mode: 'HTML');
+
         $this->end();
     }
 }

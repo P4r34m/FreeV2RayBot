@@ -9,6 +9,7 @@ use App\Telegram\Handlers\Admin\AdminBroadcastHandler;
 use App\Telegram\Handlers\Admin\AdminChannelsHandler;
 use App\Telegram\Handlers\Admin\AdminDeliveryHandler;
 use App\Telegram\Handlers\Admin\AdminMenuHandler;
+use App\Telegram\Handlers\Admin\AdminMakeTopicsHandler;
 use App\Telegram\Handlers\Admin\AdminSetGroupHandler;
 use App\Telegram\Handlers\Admin\AdminSetPathHandler;
 use App\Telegram\Handlers\Admin\AdminSettingsHandler;
@@ -141,6 +142,7 @@ $bot->group(function (Nutgram $bot) {
     $bot->onCallbackQueryData('admin:addchannel', AdminAddChannelHandler::class)->middleware(EnsureAdmin::class);
     $bot->onCallbackQueryData('admin:channels', AdminChannelsHandler::class)->middleware(EnsureAdmin::class);
     $bot->onCallbackQueryData('admin:setgroup', AdminSetGroupHandler::class)->middleware(EnsureAdmin::class);
+    $bot->onCallbackQueryData('admin:maketopics', AdminMakeTopicsHandler::class)->middleware(EnsureAdmin::class);
     $bot->onCallbackQueryData('admin:broadcast', AdminBroadcastHandler::class)->middleware(EnsureAdmin::class);
 
     /* ---- In-bot CRUD: panels ---- */
