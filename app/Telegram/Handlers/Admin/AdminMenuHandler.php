@@ -24,14 +24,23 @@ class AdminMenuHandler
             ->addRow(Btn::make("🤖 وضعیت ربات: {$power}", callback_data: 'admin:botpower'))
             ->addRow(Btn::make('📊 آمار', callback_data: 'admin:stats'))
             ->addRow(
-                Btn::make('⚙️ تنظیمات', callback_data: 'admin:settings'),
+                Btn::make('🖥 پنل‌ها', callback_data: 'admin:panels'),
+                Btn::make('📦 پلن‌ها', callback_data: 'admin:plans'),
+            )
+            ->addRow(
+                Btn::make('🎁 قوانین رفرال', callback_data: 'admin:rules'),
+                Btn::make('📚 آموزش‌ها', callback_data: 'admin:tutorials'),
+            )
+            ->addRow(
+                Btn::make('✏️ متن‌ها و دکمه‌ها', callback_data: 'admin:content'),
                 Btn::make('📡 کانال‌های اجباری', callback_data: 'admin:channels'),
             )
             ->addRow(
+                Btn::make('⚙️ تنظیمات', callback_data: 'admin:settings'),
                 Btn::make('⛔️ مدیریت کاربران', callback_data: 'admin:users'),
-                Btn::make('📢 پیام همگانی', callback_data: 'admin:broadcast'),
             )
-            ->addRow(Btn::make('🌐 پنل وب (مدیریت کامل و گزارشات)', url: $panelUrl))
+            ->addRow(Btn::make('📢 پیام همگانی', callback_data: 'admin:broadcast'))
+            ->addRow(Btn::make('🌐 پنل وب (گزارشات)', url: $panelUrl))
             ->addRow(Btn::make('🔙 بازگشت', callback_data: 'menu'));
 
         Reply::screen(

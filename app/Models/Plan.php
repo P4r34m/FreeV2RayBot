@@ -36,6 +36,16 @@ class Plan extends Model
 
     public static function default(): ?self
     {
+        // Honor an explicitly chosen default plan id (set from the bot/web panel),
+        // as long as it's still active; otherwise fall back to the is_default flag.
+        $id = \App\Models\Setting::int(\App\Support\SettingKey::DEFAULT_PLAN_ID);
+        if ($id > 0) {
+            $plan = static::query()->where('is_active', true)->find($id);
+            if ($plan) {
+                return $plan;
+            }
+        }
+
         return static::query()->where('is_active', true)
             ->orderByDesc('is_default')
             ->orderBy('sort_order')
