@@ -29,6 +29,8 @@ use App\Telegram\Handlers\Admin\AdminPanelTargetsHandler;
 use App\Telegram\Handlers\Admin\AdminPanelSetTargetHandler;
 use App\Telegram\Handlers\Admin\AdminPanelManualTargetHandler;
 use App\Telegram\Handlers\Admin\AdminPanelSubHandler;
+use App\Telegram\Handlers\Admin\AdminPanelEditHandler;
+use App\Telegram\Handlers\Admin\AdminPanelEditFieldHandler;
 // In-bot CRUD: plans
 use App\Telegram\Handlers\Admin\AdminPlansHandler;
 use App\Telegram\Handlers\Admin\AdminPlanAddHandler;
@@ -151,6 +153,8 @@ $bot->group(function (Nutgram $bot) {
     $bot->onCallbackQueryData('admin:panels:tgt:{combo}', AdminPanelSetTargetHandler::class)->middleware(EnsureAdmin::class);
     $bot->onCallbackQueryData('admin:panels:tmanual:{id}', AdminPanelManualTargetHandler::class)->middleware(EnsureAdmin::class);
     $bot->onCallbackQueryData('admin:panels:sub:{id}', AdminPanelSubHandler::class)->middleware(EnsureAdmin::class);
+    $bot->onCallbackQueryData('admin:panels:edit:{id}', AdminPanelEditHandler::class)->middleware(EnsureAdmin::class);
+    $bot->onCallbackQueryData('admin:panels:editfield:{combo}', AdminPanelEditFieldHandler::class)->middleware(EnsureAdmin::class);
 
     /* ---- In-bot CRUD: plans ---- */
     $bot->onCallbackQueryData('admin:plans', AdminPlansHandler::class)->middleware(EnsureAdmin::class);
