@@ -54,6 +54,7 @@ class AdminPanelViewHandler
 
         $kb = InlineKeyboardMarkup::make()
             ->addRow(Btn::make('🔌 تست اتصال', callback_data: 'admin:panels:test:'.$panel->id))
+            ->addRow(Btn::make('⚙️ تنظیمات بیشتر', callback_data: 'admin:panels:cfg:'.$panel->id))
             ->addRow(Btn::make($toggleLabel, callback_data: 'admin:panels:toggle:'.$panel->id))
             ->addRow(Btn::make('🗑 حذف', callback_data: 'admin:panels:del:'.$panel->id))
             ->addRow(Btn::make('🔙 بازگشت', callback_data: 'admin:panels'));

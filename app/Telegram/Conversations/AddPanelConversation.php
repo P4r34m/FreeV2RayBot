@@ -150,7 +150,7 @@ class AddPanelConversation extends Conversation
 
         $this->password = $text;
 
-        $this->askTypeSetting($bot);
+        $this->persist($bot);
     }
 
     public function captureApiToken(Nutgram $bot): void
@@ -173,105 +173,14 @@ class AddPanelConversation extends Conversation
 
         $this->apiToken = $text;
 
-        $this->askTypeSetting($bot);
+        $this->persist($bot);
     }
 
-    /** Prompt for the single type-specific setting and route to its capture step. */
-    private function askTypeSetting(Nutgram $bot): void
+    /** Create the panel record (no targets yet) and confirm, then end. */
+    private function persist(Nutgram $bot): void
     {
-        match ($this->type) {
-            PanelType::ThreeXui => $bot->sendMessage(
-                "🔢 شناسه اینباند (inbound_id) را بفرستید (عدد، الزامی).\n\nبرای لغو: /cancel"
-            ),
-            PanelType::Remnawave => $bot->sendMessage(
-                "🧩 شناسه‌های Squad را با کاما جدا کنید بفرستید، یا /skip برای رد شدن.\n\nبرای لغو: /cancel"
-            ),
-            PanelType::PasarGuard => $bot->sendMessage(
-                "👥 شناسه‌های گروه (group ids) را با کاما جدا کنید بفرستید، یا /skip برای رد شدن.\n\nبرای لغو: /cancel"
-            ),
-        };
+        $settings = [];
 
-        $this->next(match ($this->type) {
-            PanelType::ThreeXui => 'captureInboundId',
-            PanelType::Remnawave => 'captureSquadUuids',
-            PanelType::PasarGuard => 'captureGroupIds',
-        });
-    }
-
-    public function captureInboundId(Nutgram $bot): void
-    {
-        $text = trim($bot->message()?->text ?? '');
-
-        if ($text === '/cancel') {
-            $bot->sendMessage('لغو شد.');
-            $this->end();
-
-            return;
-        }
-
-        if (! ctype_digit($text)) {
-            $bot->sendMessage('شناسه اینباند نامعتبر است. فقط عدد بفرستید یا /cancel.');
-            $this->next('captureInboundId');
-
-            return;
-        }
-
-        $this->persist($bot, ['inbound_id' => (int) $text]);
-    }
-
-    public function captureSquadUuids(Nutgram $bot): void
-    {
-        $text = trim($bot->message()?->text ?? '');
-
-        if ($text === '/cancel') {
-            $bot->sendMessage('لغو شد.');
-            $this->end();
-
-            return;
-        }
-
-        $uuids = $text === '/skip'
-            ? []
-            : array_values(array_filter(array_map('trim', explode(',', $text)), fn ($v) => $v !== ''));
-
-        $this->persist($bot, ['squad_uuids' => $uuids]);
-    }
-
-    public function captureGroupIds(Nutgram $bot): void
-    {
-        $text = trim($bot->message()?->text ?? '');
-
-        if ($text === '/cancel') {
-            $bot->sendMessage('لغو شد.');
-            $this->end();
-
-            return;
-        }
-
-        $groupIds = [];
-
-        if ($text !== '/skip') {
-            $parts = array_filter(array_map('trim', explode(',', $text)), fn ($v) => $v !== '');
-
-            foreach ($parts as $part) {
-                if (! ctype_digit($part)) {
-                    $bot->sendMessage('شناسه گروه نامعتبر است. عددها را با کاما جدا کنید، یا /skip / /cancel.');
-                    $this->next('captureGroupIds');
-
-                    return;
-                }
-                $groupIds[] = (int) $part;
-            }
-
-            $groupIds = array_values($groupIds);
-        }
-
-        $this->persist($bot, ['group_ids' => $groupIds]);
-    }
-
-    /** Create the panel record and confirm, then end the conversation. */
-    private function persist(Nutgram $bot, array $settings): void
-    {
         $panel = Panel::create([
             'name' => $this->name,
             'type' => $this->type,
@@ -285,7 +194,9 @@ class AddPanelConversation extends Conversation
 
         $bot->sendMessage(
             "✅ پنل «{$panel->name}» ({$this->type->label()}) اضافه شد.\n\n".
-            "برای بررسی سلامت، از فهرست پنل‌ها واردش شوید و «🔌 تست اتصال» را بزنید.",
+            "حالا از فهرست پنل‌ها واردش شوید و:\n".
+            "• «🔌 تست اتصال» را بزنید،\n".
+            "• از «⚙️ تنظیمات بیشتر» اینباند/گروه/اسکواد را انتخاب کنید.",
             parse_mode: 'HTML',
         );
 

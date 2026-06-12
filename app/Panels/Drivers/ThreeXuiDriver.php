@@ -205,6 +205,63 @@ final class ThreeXuiDriver extends AbstractPanelDriver
         return true;
     }
 
+    /**
+     * List the panel's inbounds so the operator can pick one (the `inbound_id`
+     * setting this driver writes into) instead of typing it by hand.
+     *
+     * Hits the well-known GET /panel/api/inbounds/list via the authed client.
+     * The envelope is {success:true, obj:[{id:int, remark:string,
+     * protocol:string, port:int, enable:bool}, ...]}. Disabled inbounds are
+     * skipped only when `enable` is explicitly false; anything else is included.
+     *
+     * Best-effort: any failure (auth, transport, malformed body) yields [] so
+     * the caller can fall back to manual entry.
+     *
+     * @return list<array{id: string, label: string}>
+     */
+    public function listTargets(): array
+    {
+        try {
+            $response = $this->send('GET', '/panel/api/inbounds/list');
+
+            $data = $response->json();
+            if (! is_array($data) || ($data['success'] ?? false) !== true) {
+                return [];
+            }
+
+            $inbounds = $data['obj'] ?? null;
+            if (! is_array($inbounds)) {
+                return [];
+            }
+
+            $targets = [];
+
+            foreach ($inbounds as $inbound) {
+                if (! is_array($inbound) || ! isset($inbound['id'])) {
+                    continue;
+                }
+
+                // Only skip when the panel explicitly reports enable:false.
+                if (array_key_exists('enable', $inbound) && $inbound['enable'] === false) {
+                    continue;
+                }
+
+                $remark = trim((string) ($inbound['remark'] ?? ''));
+                $protocol = (string) ($inbound['protocol'] ?? '');
+                $port = (string) ($inbound['port'] ?? '');
+
+                $targets[] = [
+                    'id' => (string) $inbound['id'],
+                    'label' => $remark.' ['.$protocol.':'.$port.']',
+                ];
+            }
+
+            return $targets;
+        } catch (\Throwable $e) {
+            return [];
+        }
+    }
+
     // ---------------------------------------------------------------------
     // Auth
     // ---------------------------------------------------------------------

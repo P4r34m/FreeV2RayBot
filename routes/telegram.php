@@ -24,6 +24,11 @@ use App\Telegram\Handlers\Admin\AdminPanelViewHandler;
 use App\Telegram\Handlers\Admin\AdminPanelTestHandler;
 use App\Telegram\Handlers\Admin\AdminPanelToggleHandler;
 use App\Telegram\Handlers\Admin\AdminPanelDeleteHandler;
+use App\Telegram\Handlers\Admin\AdminPanelConfigHandler;
+use App\Telegram\Handlers\Admin\AdminPanelTargetsHandler;
+use App\Telegram\Handlers\Admin\AdminPanelSetTargetHandler;
+use App\Telegram\Handlers\Admin\AdminPanelManualTargetHandler;
+use App\Telegram\Handlers\Admin\AdminPanelSubHandler;
 // In-bot CRUD: plans
 use App\Telegram\Handlers\Admin\AdminPlansHandler;
 use App\Telegram\Handlers\Admin\AdminPlanAddHandler;
@@ -141,6 +146,11 @@ $bot->group(function (Nutgram $bot) {
     $bot->onCallbackQueryData('admin:panels:test:{id}', AdminPanelTestHandler::class)->middleware(EnsureAdmin::class);
     $bot->onCallbackQueryData('admin:panels:toggle:{id}', AdminPanelToggleHandler::class)->middleware(EnsureAdmin::class);
     $bot->onCallbackQueryData('admin:panels:del:{id}', AdminPanelDeleteHandler::class)->middleware(EnsureAdmin::class);
+    $bot->onCallbackQueryData('admin:panels:cfg:{id}', AdminPanelConfigHandler::class)->middleware(EnsureAdmin::class);
+    $bot->onCallbackQueryData('admin:panels:targets:{id}', AdminPanelTargetsHandler::class)->middleware(EnsureAdmin::class);
+    $bot->onCallbackQueryData('admin:panels:tgt:{combo}', AdminPanelSetTargetHandler::class)->middleware(EnsureAdmin::class);
+    $bot->onCallbackQueryData('admin:panels:tmanual:{id}', AdminPanelManualTargetHandler::class)->middleware(EnsureAdmin::class);
+    $bot->onCallbackQueryData('admin:panels:sub:{id}', AdminPanelSubHandler::class)->middleware(EnsureAdmin::class);
 
     /* ---- In-bot CRUD: plans ---- */
     $bot->onCallbackQueryData('admin:plans', AdminPlansHandler::class)->middleware(EnsureAdmin::class);

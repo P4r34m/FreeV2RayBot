@@ -45,6 +45,16 @@ interface PanelDriver
      */
     public function getUsage(string $identifier): ?ConfigUsage;
 
+    /**
+     * List selectable targets the admin assigns new configs to — 3x-ui inbounds,
+     * Remnawave squads, or PasarGuard groups. Returns an empty array when the
+     * panel can't be reached or doesn't expose a list (caller falls back to
+     * manual entry).
+     *
+     * @return list<array{id: string, label: string}>
+     */
+    public function listTargets(): array;
+
     /** Disable (but keep) a config. Returns true on success. */
     public function disableConfig(string $identifier): bool;
 

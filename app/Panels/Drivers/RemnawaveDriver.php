@@ -123,6 +123,50 @@ final class RemnawaveDriver extends AbstractPanelDriver
         );
     }
 
+    /**
+     * List the internal squads a new config can be attached to (the same UUIDs
+     * we send as activeInternalSquads on create). Maps each squad's uuid/name to
+     * the generic id/label contract. Any failure yields [] so the caller falls
+     * back to manual entry.
+     *
+     * @return list<array{id: string, label: string}>
+     */
+    public function listTargets(): array
+    {
+        try {
+            // GET /api/internal-squads → { response: { total, internalSquads: [{ uuid, name, ... }] } }.
+            // unwrap() peels the { response: ... } envelope, leaving { total, internalSquads }.
+            $data = $this->request('get', '/api/internal-squads', [], ['action' => 'listTargets']);
+
+            $squads = $data['internalSquads'] ?? [];
+
+            if (! is_array($squads)) {
+                return [];
+            }
+
+            $targets = [];
+
+            foreach ($squads as $squad) {
+                $uuid = is_array($squad) ? ($squad['uuid'] ?? null) : null;
+
+                if (! is_string($uuid) || $uuid === '') {
+                    continue;
+                }
+
+                $name = $squad['name'] ?? null;
+
+                $targets[] = [
+                    'id' => $uuid,
+                    'label' => is_string($name) && $name !== '' ? $name : $uuid,
+                ];
+            }
+
+            return $targets;
+        } catch (\Throwable) {
+            return [];
+        }
+    }
+
     public function disableConfig(string $identifier): bool
     {
         $username = $this->username($identifier);

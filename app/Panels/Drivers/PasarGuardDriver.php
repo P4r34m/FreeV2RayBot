@@ -100,6 +100,51 @@ final class PasarGuardDriver extends AbstractPanelDriver
         );
     }
 
+    /**
+     * List the groups an admin can attach users to, for the create-config UI.
+     *
+     * PasarGuard exposes these at `GET /api/groups`, returning a GroupsResponse
+     * of `{groups: [{id: int, name: string, ...}], total: int}`. The `id` lines
+     * up with the `group_ids` sent in {@see userPayload()}. Any failure (auth,
+     * network, malformed body) yields an empty list so the caller can fall back
+     * to manual entry.
+     *
+     * @return list<array{id: string, label: string}>
+     */
+    public function listTargets(): array
+    {
+        try {
+            $response = $this->request('get', '/api/groups');
+
+            if (! $response->successful()) {
+                return [];
+            }
+
+            $groups = $response->json('groups');
+
+            if (! is_array($groups)) {
+                return [];
+            }
+
+            $targets = [];
+
+            foreach ($groups as $group) {
+                if (! is_array($group) || ! isset($group['id'], $group['name'])) {
+                    continue;
+                }
+
+                $targets[] = [
+                    'id' => (string) $group['id'],
+                    'label' => (string) $group['name'],
+                ];
+            }
+
+            return $targets;
+        } catch (\Throwable) {
+            return [];
+        }
+    }
+
     public function disableConfig(string $identifier): bool
     {
         $username = $this->normalizeIdentifier($identifier);

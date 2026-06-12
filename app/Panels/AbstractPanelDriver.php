@@ -46,6 +46,17 @@ abstract class AbstractPanelDriver implements PanelDriver
         return data_get($this->panel->settings ?? [], $key, $default);
     }
 
+    /**
+     * Default: no listable targets. Concrete drivers override to fetch inbounds/
+     * squads/groups from the panel.
+     *
+     * @return list<array{id: string, label: string}>
+     */
+    public function listTargets(): array
+    {
+        return [];
+    }
+
     /** Raise a normalized panel error with context for logging. */
     protected function fail(string $message, array $context = [], ?\Throwable $previous = null): never
     {
