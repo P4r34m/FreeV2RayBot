@@ -165,7 +165,10 @@ $bot->group(function (Nutgram $bot) {
 
     $bot->onCallbackQueryData(Keyboards::CB_ADMIN, AdminMenuHandler::class)->middleware(EnsureAdmin::class);
 })
-    ->middleware(AntiSpamMiddleware::class)
-    ->middleware(MaintenanceGuard::class)
+    // Nutgram group middleware executes in REGISTRATION order, so ResolveBotUser
+    // MUST be first to populate botUser before the guards read it (otherwise an
+    // admin can't re-enable the bot while it's off — botUser would be null here).
+    ->middleware(ResolveBotUser::class)
     ->middleware(BotEnabledGuard::class)
-    ->middleware(ResolveBotUser::class); // added last => runs first
+    ->middleware(MaintenanceGuard::class)
+    ->middleware(AntiSpamMiddleware::class);
