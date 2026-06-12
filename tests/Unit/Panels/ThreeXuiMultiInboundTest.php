@@ -11,7 +11,11 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
 
-/** 3x-ui v3 multi-inbound clients: one client across several inbounds via addClientInbounds. */
+/**
+ * 3x-ui v3.3.1 attaches one client to any number of inbounds in a single
+ * clients/add call via the `inboundIds` list — there is no separate endpoint
+ * for the single- vs multi-inbound case anymore.
+ */
 class ThreeXuiMultiInboundTest extends TestCase
 {
     private function panel(array $settings): Panel
@@ -24,7 +28,7 @@ class ThreeXuiMultiInboundTest extends TestCase
         return $panel;
     }
 
-    public function test_multiple_inbounds_use_add_client_inbounds_with_id_list(): void
+    public function test_multiple_inbounds_post_clients_add_with_id_list(): void
     {
         Cache::flush();
         Http::fake(['*' => Http::response(['success' => true, 'obj' => []], 200)]);
@@ -33,17 +37,17 @@ class ThreeXuiMultiInboundTest extends TestCase
             ->createConfig(new ConfigSpec(dataLimitBytes: Bytes::GB, expirySeconds: 3600, identifier: 'u1'));
 
         Http::assertSent(function (Request $r) {
-            if (! str_ends_with($r->url(), '/panel/api/inbounds/addClientInbounds')) {
+            if (! str_ends_with($r->url(), '/panel/api/clients/add')) {
                 return false;
             }
             $this->assertSame([1, 2], $r->data()['inboundIds']);
-            $this->assertIsString($r->data()['settings']); // JSON-string quirk preserved
+            $this->assertIsArray($r->data()['client']); // real nested object, no JSON-string quirk
 
             return true;
         });
     }
 
-    public function test_single_inbound_still_uses_add_client(): void
+    public function test_single_inbound_uses_the_same_clients_add_endpoint(): void
     {
         Cache::flush();
         Http::fake(['*' => Http::response(['success' => true, 'obj' => []], 200)]);
@@ -51,6 +55,13 @@ class ThreeXuiMultiInboundTest extends TestCase
         (new ThreeXuiDriver($this->panel(['inbound_id' => 5])))
             ->createConfig(new ConfigSpec(dataLimitBytes: Bytes::GB, identifier: 'u1'));
 
-        Http::assertSent(fn (Request $r) => str_ends_with($r->url(), '/panel/api/inbounds/addClient'));
+        Http::assertSent(function (Request $r) {
+            if (! str_ends_with($r->url(), '/panel/api/clients/add')) {
+                return false;
+            }
+            $this->assertSame([5], $r->data()['inboundIds']);
+
+            return true;
+        });
     }
 }

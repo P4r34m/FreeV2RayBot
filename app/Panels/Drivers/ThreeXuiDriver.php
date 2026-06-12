@@ -14,20 +14,27 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
 
 /**
- * Driver for 3x-ui (MHSanaei/3x-ui, the Sanaei fork).
+ * Driver for 3x-ui (MHSanaei/3x-ui, the Sanaei fork) — v3.3.1 client API.
  *
  * Auth model: POST /login with {username,password}; on success the panel sets a
  * "session" cookie we persist and replay as a Cookie header. Optionally a static
  * API token (Bearer) can be used instead of logging in. The session is cached in
  * Laravel Cache under "panel:{id}:auth" and re-acquired transparently on 401/403.
  *
+ * v3.3.1 replaces the old /panel/api/inbounds/addClient endpoint with a
+ * client-centric API under /panel/api/clients/* keyed by the client email:
+ *  - create:  POST /panel/api/clients/add  {client:{...}, inboundIds:[...]}
+ *  - update:  POST /panel/api/clients/update/{email}
+ *  - delete:  POST /panel/api/clients/del/{email}?keepTraffic=0
+ *  - reset:   POST /panel/api/clients/resetTraffic/{email}
+ *  - usage:   GET  /panel/api/clients/traffic/{email}
+ *
  * Unit quirks handled here:
  *  - the client field is named `totalGB` but the value is BYTES (0 = unlimited);
  *  - `expiryTime` is UNIX MILLISECONDS (0 = no expiry);
- *  - the create/update body wraps the clients array as a JSON *string* under
- *    `settings` (a Go-side json.Unmarshal quirk of the addClient endpoint);
- *  - subId is not auto-generated (upstream bug #3237) so we generate it and build
- *    the subscription URL ourselves from sub_* settings.
+ *  - one client attaches to many inbounds in a single create via `inboundIds`;
+ *  - subId is not returned, so we generate it and build the subscription URL
+ *    ourselves from the sub_* settings.
  */
 final class ThreeXuiDriver extends AbstractPanelDriver
 {
@@ -54,24 +61,15 @@ final class ThreeXuiDriver extends AbstractPanelDriver
     {
         $inboundIds = $this->inboundIds();
         $email = $this->normalizeIdentifier($spec->identifier);
-        $uuid = (string) Str::uuid();
         $subId = $this->generateSubId();
 
-        $client = $this->buildClient($spec, $email, $uuid, $subId, enable: true);
-        $settings = json_encode(['clients' => [$client]]);
-
-        // Single inbound -> the proven addClient path. Multiple inbounds ->
-        // addClientInbounds (3x-ui v3): same email/uuid/subId across all of them,
-        // aggregated under one /sub/{subId} link.
-        $response = count($inboundIds) === 1
-            ? $this->send('POST', '/panel/api/inbounds/addClient', [
-                'id' => $inboundIds[0],
-                'settings' => $settings, // 3x-ui expects a JSON STRING, not a nested object
-            ])
-            : $this->send('POST', '/panel/api/inbounds/addClientInbounds', [
-                'settings' => $settings,
-                'inboundIds' => $inboundIds,
-            ]);
+        // v3.3.1 client API: create the client and attach it to all selected
+        // inbounds in ONE call. The shared subId aggregates them under one sub
+        // link; protocol secrets (uuid/password) are auto-generated server-side.
+        $response = $this->send('POST', '/panel/api/clients/add', [
+            'client' => $this->buildClientPayload($spec, $email, $subId),
+            'inboundIds' => $inboundIds,
+        ]);
 
         $data = $this->expectSuccess($response, 'create client', [
             'email' => $email,
@@ -84,7 +82,7 @@ final class ThreeXuiDriver extends AbstractPanelDriver
             configLinks: [],
             expiresAt: $this->expiryToCarbon($spec->expiresAtUnix() * 1000),
             dataLimitBytes: $spec->dataLimitBytes,
-            remoteUuid: $uuid,
+            remoteUuid: null,
             subId: $subId,
             raw: $data,
         );
@@ -92,39 +90,30 @@ final class ThreeXuiDriver extends AbstractPanelDriver
 
     public function renewConfig(string $identifier, ConfigSpec $spec): IssuedConfig
     {
-        $inboundId = $this->inboundId();
         $email = $this->normalizeIdentifier($identifier);
 
-        // The updateClient endpoint is keyed by the client UUID. Re-read the
-        // current client so we keep its uuid/subId even if the caller lost them.
-        $current = $this->fetchClient($email);
-        $uuid = $current['id'] ?? (string) Str::uuid();
-        $subId = $current['subId'] ?? $this->generateSubId();
-
-        $client = $this->buildClient($spec, $email, $uuid, $subId, enable: true);
-
-        $response = $this->send('POST', "/panel/api/inbounds/updateClient/{$uuid}", [
-            'id' => $inboundId,
-            'settings' => json_encode(['clients' => [$client]]),
-        ]);
-
-        $data = $this->expectSuccess($response, 'renew client', [
+        // update is keyed by email and propagates to every attached inbound.
+        $response = $this->send('POST', "/panel/api/clients/update/{$email}", [
             'email' => $email,
-            'uuid' => $uuid,
+            'totalGB' => $spec->dataLimitBytes,
+            'expiryTime' => $spec->expiresAtUnix() * 1000,
+            'limitIp' => (int) $this->setting('limit_ip', 0),
+            'enable' => true,
         ]);
+
+        $data = $this->expectSuccess($response, 'renew client', ['email' => $email]);
 
         if ($spec->resetUsage) {
-            $this->resetTraffic($email);
+            $this->send('POST', "/panel/api/clients/resetTraffic/{$email}");
         }
 
         return new IssuedConfig(
             identifier: $email,
-            subscriptionUrl: $this->buildSubscriptionUrl($subId),
+            // subId/sub URL are unchanged on renew — caller keeps the existing one.
+            subscriptionUrl: null,
             configLinks: [],
             expiresAt: $this->expiryToCarbon($spec->expiresAtUnix() * 1000),
             dataLimitBytes: $spec->dataLimitBytes,
-            remoteUuid: $uuid,
-            subId: $subId,
             raw: $data,
         );
     }
@@ -133,15 +122,17 @@ final class ThreeXuiDriver extends AbstractPanelDriver
     {
         $email = $this->normalizeIdentifier($identifier);
 
-        $response = $this->send('GET', "/panel/api/inbounds/getClientTraffics/{$email}");
+        $response = $this->send('GET', "/panel/api/clients/traffic/{$email}");
 
         if ($response->status() === 404) {
             return null;
         }
 
-        $data = $this->expectSuccess($response, 'get usage', ['email' => $email]);
+        $data = $response->json();
+        if (! is_array($data) || ($data['success'] ?? false) !== true) {
+            return null; // client not found
+        }
 
-        // On a missing client 3x-ui returns success:true with obj:null.
         $obj = $data['obj'] ?? null;
         if (! is_array($obj)) {
             return null;
@@ -149,44 +140,27 @@ final class ThreeXuiDriver extends AbstractPanelDriver
 
         $up = (int) ($obj['up'] ?? 0);
         $down = (int) ($obj['down'] ?? 0);
-        $total = (int) ($obj['total'] ?? 0);
-        $enable = (bool) ($obj['enable'] ?? true);
-        $expiryMs = (int) ($obj['expiryTime'] ?? 0);
 
         return new ConfigUsage(
             usedBytes: $up + $down,
-            totalBytes: $total,
-            expiresAt: $this->expiryToCarbon($expiryMs),
-            status: $enable ? 'active' : 'disabled',
+            totalBytes: (int) ($obj['total'] ?? 0),
+            expiresAt: $this->expiryToCarbon((int) ($obj['expiryTime'] ?? 0)),
+            status: ($obj['enable'] ?? true) ? 'active' : 'disabled',
             raw: $obj,
         );
     }
 
     public function disableConfig(string $identifier): bool
     {
-        $inboundId = $this->inboundId();
         $email = $this->normalizeIdentifier($identifier);
 
-        $current = $this->fetchClient($email);
-        if ($current === null) {
-            // Nothing to disable — treat an absent client as already disabled.
-            return true;
-        }
-
-        $uuid = $current['id'] ?? '';
-        if ($uuid === '') {
-            $this->fail('3x-ui client is missing a uuid; cannot disable.', ['email' => $email]);
-        }
-
-        // Re-send the client with enable:false, preserving its existing limits.
-        $client = array_merge($current, ['enable' => false, 'email' => $email]);
-
-        $response = $this->send('POST', "/panel/api/inbounds/updateClient/{$uuid}", [
-            'id' => $inboundId,
-            'settings' => json_encode(['clients' => [$client]]),
+        // Partial update: omitted fields (quota/expiry) are preserved server-side.
+        $response = $this->send('POST', "/panel/api/clients/update/{$email}", [
+            'email' => $email,
+            'enable' => false,
         ]);
 
-        $this->expectSuccess($response, 'disable client', ['email' => $email, 'uuid' => $uuid]);
+        $this->expectSuccess($response, 'disable client', ['email' => $email]);
 
         return true;
     }
@@ -195,20 +169,8 @@ final class ThreeXuiDriver extends AbstractPanelDriver
     {
         $email = $this->normalizeIdentifier($identifier);
 
-        $current = $this->fetchClient($email);
-        if ($current === null) {
-            return true; // already gone
-        }
-
-        $uuid = $current['id'] ?? '';
-        if ($uuid === '') {
-            $this->fail('3x-ui client is missing a uuid; cannot delete.', ['email' => $email]);
-        }
-
-        // delClient is per-inbound; remove from every configured inbound (best-effort).
-        foreach ($this->inboundIds() as $inboundId) {
-            $this->send('POST', "/panel/api/inbounds/{$inboundId}/delClient/{$uuid}");
-        }
+        // Removes the client from every attached inbound; idempotent if absent.
+        $this->send('POST', "/panel/api/clients/del/{$email}?keepTraffic=0");
 
         return true;
     }
@@ -469,47 +431,28 @@ final class ThreeXuiDriver extends AbstractPanelDriver
     }
 
     /**
-     * Read a single client (by email) out of the inbound so we can recover its
-     * uuid/subId for renew/disable/delete. Returns null if not present.
+     * Build the v3.3.1 client object for clients/add. Only universal fields are
+     * sent; protocol secrets (uuid/password) are generated server-side.
      *
-     * @return array<string, mixed>|null
+     * @return array<string, mixed>
      */
-    private function fetchClient(string $email): ?array
+    private function buildClientPayload(ConfigSpec $spec, string $email, string $subId): array
     {
-        $inboundId = $this->inboundId();
+        $client = [
+            'email' => $email,
+            'totalGB' => $spec->dataLimitBytes,            // bytes (0 = unlimited)
+            'expiryTime' => $spec->expiresAtUnix() * 1000, // Unix ms (0 = no expiry)
+            'limitIp' => (int) $this->setting('limit_ip', 0),
+            'enable' => true,
+            'subId' => $subId,
+        ];
 
-        $response = $this->send('GET', "/panel/api/inbounds/get/{$inboundId}");
-
-        if ($response->status() === 404) {
-            return null;
+        $flow = (string) $this->setting('flow', '');
+        if ($flow !== '') {
+            $client['flow'] = $flow;
         }
 
-        $data = $this->expectSuccess($response, 'load inbound', ['inbound_id' => $inboundId]);
-
-        $settings = $data['obj']['settings'] ?? null;
-        if (! is_string($settings)) {
-            return null;
-        }
-
-        $decoded = json_decode($settings, true);
-        $clients = is_array($decoded) ? ($decoded['clients'] ?? []) : [];
-
-        foreach ($clients as $client) {
-            if (is_array($client) && ($client['email'] ?? null) === $email) {
-                return $client;
-            }
-        }
-
-        return null;
-    }
-
-    /** Reset traffic for the client in every configured inbound (best-effort). */
-    private function resetTraffic(string $email): void
-    {
-        foreach ($this->inboundIds() as $inboundId) {
-            // Best-effort per inbound: a client may not exist in every inbound.
-            $this->send('POST', "/panel/api/inbounds/{$inboundId}/resetClientTraffic/{$email}");
-        }
+        return $client;
     }
 
     // ---------------------------------------------------------------------
@@ -517,31 +460,8 @@ final class ThreeXuiDriver extends AbstractPanelDriver
     // ---------------------------------------------------------------------
 
     /**
-     * Build a single 3x-ui client payload from the normalized spec.
-     *
-     * @return array<string, mixed>
-     */
-    private function buildClient(ConfigSpec $spec, string $email, string $uuid, string $subId, bool $enable): array
-    {
-        return [
-            'id' => $uuid,
-            'email' => $email,
-            // Field is named totalGB but 3x-ui treats the value as BYTES (0 = unlimited).
-            'totalGB' => $spec->dataLimitBytes,
-            // Unix MILLISECONDS, or 0 for no expiry.
-            'expiryTime' => $spec->hasExpiry() ? $spec->expiresAtUnix() * 1000 : 0,
-            'enable' => $enable,
-            'flow' => (string) $this->setting('flow', ''),
-            'limitIp' => (int) $this->setting('limit_ip', 0),
-            'tgId' => '',
-            'subId' => $subId,
-            'reset' => 0,
-        ];
-    }
-
-    /**
-     * Build the subscription URL ourselves (the API does not return one and subId
-     * is not auto-generated — upstream bug #3237). Collapses duplicate slashes.
+     * Build the subscription URL from the configured sub host/port/path and the
+     * subId we set on the client. Collapses duplicate slashes.
      */
     private function buildSubscriptionUrl(string $subId): string
     {
@@ -593,12 +513,6 @@ final class ThreeXuiDriver extends AbstractPanelDriver
         }
 
         return $ids;
-    }
-
-    /** First inbound id — for endpoints that operate on a single inbound. */
-    private function inboundId(): int
-    {
-        return $this->inboundIds()[0];
     }
 
     /** Convert a 3x-ui millisecond expiry to a CarbonImmutable (null = no expiry). */

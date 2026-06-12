@@ -12,8 +12,9 @@ use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
 
 /**
- * Unit coverage for the 3x-ui driver: the create payload (units + JSON-string
- * settings quirk), the login -> session-cookie auth flow, and usage parsing.
+ * Unit coverage for the 3x-ui driver against the v3.3.1 client API: the
+ * clients/add create payload (byte units, inboundIds), the login -> session
+ * cookie auth flow, the Bearer-token shortcut, and usage parsing.
  */
 class ThreeXuiDriverTest extends TestCase
 {
@@ -36,7 +37,7 @@ class ThreeXuiDriverTest extends TestCase
         return $panel;
     }
 
-    public function test_create_config_logs_in_then_posts_client_with_byte_units_and_json_string_settings(): void
+    public function test_create_config_logs_in_then_posts_client_to_clients_add_with_byte_units(): void
     {
         Cache::flush();
 
@@ -44,7 +45,7 @@ class ThreeXuiDriverTest extends TestCase
             '*/login' => Http::response(['success' => true], 200, [
                 'Set-Cookie' => 'session=abc123; Path=/; HttpOnly',
             ]),
-            '*/panel/api/inbounds/addClient' => Http::response(['success' => true, 'msg' => 'Client added']),
+            '*/panel/api/clients/add' => Http::response(['success' => true, 'msg' => 'Client added']),
         ]);
 
         $driver = new ThreeXuiDriver($this->makePanel());
@@ -57,28 +58,32 @@ class ThreeXuiDriverTest extends TestCase
 
         $issued = $driver->createConfig($spec);
 
-        // (a) The create request body carries the right units + the JSON-string quirk.
+        // (a) The create request body carries the v3.3.1 shape + the right units.
         Http::assertSent(function (Request $request) {
-            if (! str_ends_with($request->url(), '/panel/api/inbounds/addClient')) {
+            if (! str_ends_with($request->url(), '/panel/api/clients/add')) {
                 return false;
             }
 
             $body = $request->data();
-            $this->assertSame(3, $body['id']);                 // inbound id
-            $this->assertIsString($body['settings']);          // settings is a JSON STRING
 
-            $client = json_decode($body['settings'], true)['clients'][0];
+            // Client object is sent as a real nested object (no JSON-string quirk).
+            $client = $body['client'];
+            $this->assertIsArray($client);
             $this->assertSame(5 * Bytes::GB, $client['totalGB']); // BYTES, not GB
             $this->assertTrue($client['enable']);
-            $this->assertSame('user42', $client['email']);     // normalized identifier
+            $this->assertSame('user42', $client['email']);        // normalized identifier
+            $this->assertNotEmpty($client['subId']);
             // expiryTime is unix MILLISECONDS in the near future.
             $this->assertGreaterThan(time() * 1000, $client['expiryTime']);
+
+            // The selected inbound(s) ride alongside the client.
+            $this->assertSame([3], $body['inboundIds']);
 
             return true;
         });
 
         // The session cookie obtained from /login is replayed on the create call.
-        Http::assertSent(fn (Request $request) => str_ends_with($request->url(), '/panel/api/inbounds/addClient')
+        Http::assertSent(fn (Request $request) => str_ends_with($request->url(), '/panel/api/clients/add')
             && $request->header('Cookie')[0] === 'session=abc123');
 
         // The driver builds the subscription URL itself from the sub_* settings.
@@ -86,7 +91,8 @@ class ThreeXuiDriverTest extends TestCase
             'https://sub.example.com:2096/sub/'.$issued->subId,
             $issued->subscriptionUrl
         );
-        $this->assertNotNull($issued->remoteUuid);
+        // v3.3.1 generates protocol secrets server-side; we no longer carry a uuid.
+        $this->assertNull($issued->remoteUuid);
         $this->assertSame('user42', $issued->identifier);
         $this->assertSame(5 * Bytes::GB, $issued->dataLimitBytes);
     }
@@ -96,7 +102,7 @@ class ThreeXuiDriverTest extends TestCase
         Cache::flush();
 
         Http::fake([
-            '*/panel/api/inbounds/addClient' => Http::response(['success' => true]),
+            '*/panel/api/clients/add' => Http::response(['success' => true]),
         ]);
 
         $driver = new ThreeXuiDriver($this->makePanel(['api_token' => 'tok-xyz']));
@@ -105,7 +111,7 @@ class ThreeXuiDriverTest extends TestCase
 
         // No /login round-trip; the Bearer token is sent instead of a cookie.
         Http::assertNotSent(fn (Request $request) => str_ends_with($request->url(), '/login'));
-        Http::assertSent(fn (Request $request) => str_ends_with($request->url(), '/panel/api/inbounds/addClient')
+        Http::assertSent(fn (Request $request) => str_ends_with($request->url(), '/panel/api/clients/add')
             && $request->header('Authorization')[0] === 'Bearer tok-xyz');
     }
 
@@ -117,7 +123,7 @@ class ThreeXuiDriverTest extends TestCase
             '*/login' => Http::response(['success' => true], 200, [
                 'Set-Cookie' => 'session=abc123; Path=/',
             ]),
-            '*/panel/api/inbounds/getClientTraffics/*' => Http::response([
+            '*/panel/api/clients/traffic/*' => Http::response([
                 'success' => true,
                 'obj' => [
                     'up' => 1_000,
@@ -140,13 +146,27 @@ class ThreeXuiDriverTest extends TestCase
         $this->assertSame(1_900_000_000, $usage->expiresAt?->getTimestamp()); // ms -> s
     }
 
+    public function test_get_usage_returns_null_when_client_missing(): void
+    {
+        Cache::flush();
+
+        Http::fake([
+            '*/login' => Http::response(['success' => true], 200, ['Set-Cookie' => 'session=abc123']),
+            '*/panel/api/clients/traffic/*' => Http::response(['success' => false, 'msg' => 'not found']),
+        ]);
+
+        $driver = new ThreeXuiDriver($this->makePanel());
+
+        $this->assertNull($driver->getUsage('ghost'));
+    }
+
     public function test_create_config_throws_panel_exception_on_unsuccessful_response(): void
     {
         Cache::flush();
 
         Http::fake([
             '*/login' => Http::response(['success' => true], 200, ['Set-Cookie' => 'session=abc123']),
-            '*/panel/api/inbounds/addClient' => Http::response(['success' => false, 'msg' => 'duplicate email']),
+            '*/panel/api/clients/add' => Http::response(['success' => false, 'msg' => 'duplicate email']),
         ]);
 
         $driver = new ThreeXuiDriver($this->makePanel());
