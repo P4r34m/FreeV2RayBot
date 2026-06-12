@@ -34,9 +34,11 @@ class AdminPanelEditHandler
                 Btn::make('👤 یوزرنیم', callback_data: "admin:panels:editfield:{$panel->id}_username"),
                 Btn::make('🔒 پسورد', callback_data: "admin:panels:editfield:{$panel->id}_password"),
             );
-        } else {
-            $kb->addRow(Btn::make('🔑 توکن API', callback_data: "admin:panels:editfield:{$panel->id}_api_token"));
         }
+
+        // API token is available for every panel type — for 3x-ui it bypasses the
+        // CSRF protection on POST /login (recommended for v3.x panels).
+        $kb->addRow(Btn::make('🔑 توکن API', callback_data: "admin:panels:editfield:{$panel->id}_api_token"));
 
         $kb->addRow(Btn::make('🔙 بازگشت', callback_data: "admin:panels:view:{$panel->id}"));
 
