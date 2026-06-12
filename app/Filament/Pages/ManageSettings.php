@@ -6,6 +6,7 @@ use App\Models\Plan;
 use App\Models\Setting;
 use App\Support\SettingKey;
 use BackedEnum;
+use Filament\Actions\Action;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
@@ -15,6 +16,7 @@ use Filament\Pages\Page;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
+use Illuminate\Support\Facades\Artisan;
 
 /**
  * Single-page editor for the runtime `settings` key/value store.
@@ -55,6 +57,38 @@ class ManageSettings extends Page
             SettingKey::ANTISPAM_WINDOW_SECONDS => Setting::int(SettingKey::ANTISPAM_WINDOW_SECONDS, 60),
             SettingKey::ANTISPAM_BLOCK_MINUTES => Setting::int(SettingKey::ANTISPAM_BLOCK_MINUTES, 10),
         ]);
+    }
+
+    /**
+     * Header actions. "Flush updates" re-sets the Telegram webhook with
+     * drop_pending_updates=true — the go-to remedy when the bot is stuck behind a
+     * backlog of queued updates and stops responding.
+     */
+    protected function getHeaderActions(): array
+    {
+        return [
+            Action::make('flushUpdates')
+                ->label('پاک‌سازی صف آپدیت‌ها')
+                ->icon('heroicon-o-arrow-path')
+                ->color('warning')
+                ->requiresConfirmation()
+                ->modalHeading('پاک‌سازی آپدیت‌های در صف ربات')
+                ->modalDescription('اگر ربات هنگ کرده یا پاسخ نمی‌دهد، این کار صف آپدیت‌های در انتظارِ تلگرام را خالی کرده و وبهوک را دوباره تنظیم می‌کند.')
+                ->modalSubmitActionLabel('بله، انجام بده')
+                ->action(function () {
+                    try {
+                        Artisan::call('bot:set-webhook');
+                        Notification::make()
+                            ->title('✅ صف آپدیت‌ها پاک و وبهوک دوباره تنظیم شد')
+                            ->success()->send();
+                    } catch (\Throwable $e) {
+                        Notification::make()
+                            ->title('❌ خطا در پاک‌سازی صف آپدیت‌ها')
+                            ->body(mb_substr($e->getMessage(), 0, 200))
+                            ->danger()->send();
+                    }
+                }),
+        ];
     }
 
     public function form(Schema $schema): Schema
