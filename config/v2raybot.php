@@ -34,6 +34,20 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Web (Filament) admin panel
+    |--------------------------------------------------------------------------
+    | Deploy-time defaults. The DB settings `admin_path` / `web_panel_enabled`
+    | (editable from the bot) override these and apply live (no route cache in
+    | the web container), so the admin can change the path / disable the panel
+    | without a rebuild.
+    */
+    'panel' => [
+        'path' => env('FILAMENT_PATH', 'admin'),
+        'enabled' => filter_var(env('WEB_PANEL_ENABLED', true), FILTER_VALIDATE_BOOL),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Limits / safety
     |--------------------------------------------------------------------------
     */

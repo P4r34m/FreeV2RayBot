@@ -10,6 +10,7 @@ use App\Telegram\Handlers\Admin\AdminChannelsHandler;
 use App\Telegram\Handlers\Admin\AdminDeliveryHandler;
 use App\Telegram\Handlers\Admin\AdminMenuHandler;
 use App\Telegram\Handlers\Admin\AdminSetGroupHandler;
+use App\Telegram\Handlers\Admin\AdminSetPathHandler;
 use App\Telegram\Handlers\Admin\AdminSettingsHandler;
 use App\Telegram\Handlers\Admin\AdminStatsHandler;
 use App\Telegram\Handlers\Admin\AdminToggleHandler;
@@ -34,6 +35,8 @@ use App\Telegram\Middleware\BotEnabledGuard;
 use App\Telegram\Middleware\EnsureAdmin;
 use App\Telegram\Middleware\MaintenanceGuard;
 use App\Telegram\Middleware\ResolveBotUser;
+use App\Models\Setting;
+use App\Support\SettingKey;
 use SergiX44\Nutgram\Nutgram;
 
 /*
@@ -57,6 +60,16 @@ $bot->group(function (Nutgram $bot) {
     $bot->onCommand('start', StartHandler::class)->description('شروع و دریافت منو');
     $bot->onCommand('admin', AdminMenuHandler::class)->middleware(EnsureAdmin::class)->description('پنل مدیریت');
 
+    // Quick power commands — work for admins even when the bot is switched off.
+    $bot->onCommand('on', function (Nutgram $bot) {
+        Setting::put(SettingKey::BOT_ENABLED, true);
+        $bot->sendMessage('🟢 ربات روشن شد.');
+    })->middleware(EnsureAdmin::class)->description('روشن‌کردن ربات');
+    $bot->onCommand('off', function (Nutgram $bot) {
+        Setting::put(SettingKey::BOT_ENABLED, false);
+        $bot->sendMessage('🔴 ربات خاموش شد. برای روشن‌کردن: /on');
+    })->middleware(EnsureAdmin::class)->description('خاموش‌کردن ربات');
+
     /* ------------------------- User callbacks ------------------------- */
     $bot->onCallbackQueryData(Keyboards::CB_MENU, MenuHandler::class);
     $bot->onCallbackQueryData(Keyboards::CB_GET_CONFIG, GetConfigHandler::class);
@@ -76,6 +89,7 @@ $bot->group(function (Nutgram $bot) {
     $bot->onCallbackQueryData('admin:settings', AdminSettingsHandler::class)->middleware(EnsureAdmin::class);
     $bot->onCallbackQueryData('admin:toggle:{key}', AdminToggleHandler::class)->middleware(EnsureAdmin::class);
     $bot->onCallbackQueryData('admin:delivery', AdminDeliveryHandler::class)->middleware(EnsureAdmin::class);
+    $bot->onCallbackQueryData('admin:setpath', AdminSetPathHandler::class)->middleware(EnsureAdmin::class);
     $bot->onCallbackQueryData('admin:users', AdminUsersHandler::class)->middleware(EnsureAdmin::class);
     $bot->onCallbackQueryData('admin:block', AdminBlockHandler::class)->middleware(EnsureAdmin::class);
     $bot->onCallbackQueryData('admin:unblock', AdminUnblockHandler::class)->middleware(EnsureAdmin::class);

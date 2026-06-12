@@ -47,6 +47,11 @@ final class SettingKey
 
     public const ANTISPAM_BLOCK_MINUTES = 'antispam_block_minutes';
 
+    // Web (Filament) panel: custom URL path + on/off, both live-editable.
+    public const ADMIN_PATH = 'admin_path';
+
+    public const WEB_PANEL_ENABLED = 'web_panel_enabled';
+
     /** @return array<string, mixed> default values seeded on install */
     public static function defaults(): array
     {
@@ -68,6 +73,8 @@ final class SettingKey
             self::ANTISPAM_MAX_ACTIONS => 20,
             self::ANTISPAM_WINDOW_SECONDS => 60,
             self::ANTISPAM_BLOCK_MINUTES => 10,
+            self::ADMIN_PATH => env('FILAMENT_PATH', 'admin'),
+            self::WEB_PANEL_ENABLED => true,
         ];
     }
 }

@@ -26,7 +26,7 @@ class AdminPanelProvider extends PanelProvider
         return $panel
             ->default()
             ->id('admin')
-            ->path('admin')
+            ->path(\App\Support\PanelConfig::path())
             ->login()
             ->colors([
                 'primary' => Color::Amber,
@@ -42,6 +42,7 @@ class AdminPanelProvider extends PanelProvider
                 FilamentInfoWidget::class,
             ])
             ->middleware([
+                \App\Http\Middleware\EnsureWebPanelEnabled::class,
                 EncryptCookies::class,
                 AddQueuedCookiesToResponse::class,
                 StartSession::class,

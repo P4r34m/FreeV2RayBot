@@ -30,7 +30,9 @@ class AdminSettingsHandler
                 $this->toggle('گزارش‌دهی', SettingKey::REPORTS_ENABLED),
             )
             ->addRow($this->toggle('حالت تعمیر', SettingKey::MAINTENANCE_MODE))
+            ->addRow($this->toggle('پنل وب', SettingKey::WEB_PANEL_ENABLED, true))
             ->addRow(Btn::make("📦 نحوه تحویل: {$delivery}", callback_data: 'admin:delivery'))
+            ->addRow(Btn::make('🔐 مسیر (path) پنل وب: /'.\App\Support\PanelConfig::path(), callback_data: 'admin:setpath'))
             ->addRow(Btn::make('📨 تنظیم گروه گزارشات', callback_data: 'admin:setgroup'))
             ->addRow(Btn::make('🔙 بازگشت', callback_data: 'admin'));
 

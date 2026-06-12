@@ -18,6 +18,7 @@ class AdminToggleHandler
         SettingKey::ANTISPAM_ENABLED,
         SettingKey::REPORTS_ENABLED,
         SettingKey::MAINTENANCE_MODE,
+        SettingKey::WEB_PANEL_ENABLED,
     ];
 
     public function __invoke(Nutgram $bot, string $key): void
