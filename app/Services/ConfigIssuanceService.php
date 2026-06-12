@@ -88,12 +88,18 @@ class ConfigIssuanceService
      */
     public function renew(Config $config, ?Plan $plan = null): Config
     {
-        $plan ??= $config->plan ?? Plan::default();
         $config->loadMissing('panel');
 
         if (! $config->panel) {
             throw new NoPanelAvailableException('سرور این کانفیگ دیگر در دسترس نیست.');
         }
+
+        // Plan precedence: an explicit plan, else the config's own plan, else the
+        // panel's current plan (planForPanel itself falls back to the global
+        // default). This keeps a renewal tied to the panel even when the original
+        // plan was deleted — we never silently drop to the global default while the
+        // panel still has its own plan.
+        $plan ??= $config->plan ?? $this->planForPanel($config->panel);
 
         $user = $config->botUser;
         [$spec, $bonusBytes, $bonusDays] = $this->buildSpec($user, $plan, $config->remote_identifier, resetUsage: true);

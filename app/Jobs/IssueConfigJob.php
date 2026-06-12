@@ -56,7 +56,11 @@ class IssueConfigJob implements ShouldQueue
             return;
         }
 
-        $plan = $this->planId ? Plan::find($this->planId) : Plan::default();
+        // Only honor an EXPLICIT plan id. When none is set, pass null so the issuer
+        // resolves the plan from the chosen panel (panel-specific plan, else the
+        // global default) — passing Plan::default() here would override a panel's
+        // own plan whenever the user picks a server.
+        $plan = $this->planId ? Plan::find($this->planId) : null;
 
         try {
             $config = $this->mode === 'renew'

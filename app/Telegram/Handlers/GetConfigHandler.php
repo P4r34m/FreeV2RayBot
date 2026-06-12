@@ -23,12 +23,15 @@ class GetConfigHandler
 
         /** @var BotUser $user */
         $user = $bot->get('botUser');
-        $hasActive = $user->configs()->where('status', ConfigStatus::Active->value)->exists();
 
-        $text = $hasActive
-            ? Content::text('config.menu_active')
-            : Content::text('config.menu_inactive');
+        // With an active config, offer the new/renew/status menu. With none, skip
+        // straight to choosing a server — the user never has to pick a plan.
+        if ($user->configs()->where('status', ConfigStatus::Active->value)->exists()) {
+            Reply::screen($bot, Content::text('config.menu_active'), Keyboards::configMenu(true));
 
-        Reply::screen($bot, $text, Keyboards::configMenu($hasActive));
+            return;
+        }
+
+        IssueNewHandler::start($bot, $user);
     }
 }

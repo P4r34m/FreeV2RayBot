@@ -25,9 +25,18 @@ class IssueNewHandler
             return;
         }
 
-        /** @var BotUser $user */
-        $user = $bot->get('botUser');
+        self::start($bot, $bot->get('botUser'));
+    }
 
+    /**
+     * Begin a new-config issuance: enforce the active-config cap, then either
+     * show the server picker (several panels) or issue immediately (one panel).
+     * The user never picks a plan — its volume/duration come from the panel.
+     *
+     * Callers must have already answered the callback and passed the channel gate.
+     */
+    public static function start(Nutgram $bot, BotUser $user): void
+    {
         $activeCount = $user->configs()->where('status', ConfigStatus::Active->value)->count();
         $max = (int) config('v2raybot.limits.max_active_configs_per_user', 1);
 
@@ -41,10 +50,19 @@ class IssueNewHandler
             return;
         }
 
-        // If more than one server is available, let the user choose; otherwise
-        // auto-select. The plan (volume/duration) is resolved from the panel.
         $panels = app(PanelSelector::class)->available();
 
+        if ($panels->isEmpty()) {
+            Reply::screen(
+                $bot,
+                Content::text('config.no_panel', ['message' => 'در حال حاضر هیچ سروری در دسترس نیست.']),
+                Keyboards::backMenu(),
+            );
+
+            return;
+        }
+
+        // Several servers → let the user choose which one their config comes from.
         if ($panels->count() > 1) {
             $kb = InlineKeyboardMarkup::make();
             foreach ($panels as $panel) {
@@ -52,12 +70,13 @@ class IssueNewHandler
             }
             $kb->addRow(Keyboards::backButton(Keyboards::CB_GET_CONFIG));
 
-            Reply::screen($bot, '🌐 سرور موردنظر را انتخاب کنید:', $kb);
+            Reply::screen($bot, Content::text('config.pick_server'), $kb);
 
             return;
         }
 
-        $this->dispatch($bot, $user);
+        // Exactly one server → nothing to choose; issue on it right away.
+        self::dispatch($bot, $user, $panels->first()->id);
     }
 
     /** Kick off issuance (panelId null => auto-select). */
