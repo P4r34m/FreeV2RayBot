@@ -10,6 +10,24 @@ class Screens
 {
     public static function mainMenu(Nutgram $bot, BotUser $user): void
     {
-        Reply::screen($bot, Content::text('welcome'), Keyboards::mainMenu($user->is_admin));
+        $welcome = Content::text('welcome');
+
+        // Reply keyboards are chat-level and can't ride on editMessageText, so in
+        // reply mode we always send a fresh message to (re)set the keyboard.
+        if (Keyboards::mode() === 'reply') {
+            if ($bot->isCallbackQuery()) {
+                $bot->answerCallbackQuery();
+            }
+
+            $bot->sendMessage(
+                text: $welcome,
+                parse_mode: 'HTML',
+                reply_markup: Keyboards::mainReplyKeyboard($user->is_admin),
+            );
+
+            return;
+        }
+
+        Reply::screen($bot, $welcome, Keyboards::mainMenu($user->is_admin));
     }
 }

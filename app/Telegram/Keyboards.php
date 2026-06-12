@@ -2,9 +2,13 @@
 
 namespace App\Telegram;
 
+use App\Models\Setting;
+use App\Support\SettingKey;
 use Illuminate\Support\Collection;
 use SergiX44\Nutgram\Telegram\Types\Keyboard\InlineKeyboardButton as Btn;
 use SergiX44\Nutgram\Telegram\Types\Keyboard\InlineKeyboardMarkup;
+use SergiX44\Nutgram\Telegram\Types\Keyboard\KeyboardButton;
+use SergiX44\Nutgram\Telegram\Types\Keyboard\ReplyKeyboardMarkup;
 
 /**
  * Inline keyboards. Button LABELS come from the admin-editable Content store
@@ -33,6 +37,33 @@ class Keyboards
     public const CB_CHECK_JOIN = 'check_join';
 
     public const CB_ADMIN = 'admin';
+
+    /** Current main-menu button style: 'inline' (glass) or 'reply' (keyboard). */
+    public static function mode(): string
+    {
+        return Setting::string(SettingKey::KEYBOARD_MODE, 'inline') === 'reply' ? 'reply' : 'inline';
+    }
+
+    /**
+     * Main menu as a persistent reply keyboard. Button presses arrive as text and
+     * are routed by ReplyKeyboardRouter. (Premium-emoji icons are inline-only.)
+     */
+    public static function mainReplyKeyboard(bool $isAdmin = false): ReplyKeyboardMarkup
+    {
+        $kb = ReplyKeyboardMarkup::make(resize_keyboard: true, is_persistent: true)
+            ->addRow(KeyboardButton::make(Content::buttonLabel('menu.get_config')))
+            ->addRow(
+                KeyboardButton::make(Content::buttonLabel('menu.tutorials')),
+                KeyboardButton::make(Content::buttonLabel('menu.referral')),
+            )
+            ->addRow(KeyboardButton::make(Content::buttonLabel('menu.profile')));
+
+        if ($isAdmin) {
+            $kb->addRow(KeyboardButton::make(Content::buttonLabel('menu.admin')));
+        }
+
+        return $kb;
+    }
 
     /** The user-facing main menu (+ admin entry when applicable). */
     public static function mainMenu(bool $isAdmin = false): InlineKeyboardMarkup

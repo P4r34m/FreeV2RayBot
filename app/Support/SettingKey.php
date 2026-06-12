@@ -52,6 +52,9 @@ final class SettingKey
 
     public const WEB_PANEL_ENABLED = 'web_panel_enabled';
 
+    // Main-menu button style: 'inline' (glass) or 'reply' (custom keyboard).
+    public const KEYBOARD_MODE = 'keyboard_mode';
+
     /** @return array<string, mixed> default values seeded on install */
     public static function defaults(): array
     {
@@ -75,6 +78,7 @@ final class SettingKey
             self::ANTISPAM_BLOCK_MINUTES => 10,
             self::ADMIN_PATH => env('FILAMENT_PATH', 'admin'),
             self::WEB_PANEL_ENABLED => true,
+            self::KEYBOARD_MODE => 'inline',
         ];
     }
 }

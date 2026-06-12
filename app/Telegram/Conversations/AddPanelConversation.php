@@ -28,8 +28,16 @@ class AddPanelConversation extends Conversation
 
     public function start(Nutgram $bot): void
     {
+        // $this->type is pre-selected via inline buttons before the conversation.
+        if (! $this->type instanceof PanelType) {
+            $bot->sendMessage('نوع پنل مشخص نشد. دوباره از «افزودن پنل» شروع کنید.');
+            $this->end();
+
+            return;
+        }
+
         $bot->sendMessage(
-            "🖥 <b>افزودن پنل جدید</b>\n\n".
+            "🖥 <b>افزودن پنل ({$this->type->label()})</b>\n\n".
             "یک نام برای این پنل بفرستید (مثلاً: سرور آلمان ۱).\n\n".
             'برای لغو: /cancel',
             parse_mode: 'HTML',
@@ -59,41 +67,6 @@ class AddPanelConversation extends Conversation
         $this->name = $text;
 
         $bot->sendMessage(
-            "نوع پنل: عدد بفرستید\n1) 3x-ui\n2) PasarGuard\n3) Remnawave\n\nبرای لغو: /cancel"
-        );
-
-        $this->next('captureType');
-    }
-
-    public function captureType(Nutgram $bot): void
-    {
-        $text = trim($bot->message()?->text ?? '');
-
-        if ($text === '/cancel') {
-            $bot->sendMessage('لغو شد.');
-            $this->end();
-
-            return;
-        }
-
-        $type = match ($text) {
-            '1' => PanelType::ThreeXui,
-            '2' => PanelType::PasarGuard,
-            '3' => PanelType::Remnawave,
-            default => null,
-        };
-
-        if ($type === null) {
-            $bot->sendMessage("عدد نامعتبر است. فقط 1، 2 یا 3 بفرستید یا /cancel.");
-            $this->next('captureType');
-
-            return;
-        }
-
-        $this->type = $type;
-
-        $bot->sendMessage(
-            "✅ نوع: {$type->label()}\n\n".
             "🌐 آدرس پایه (base_url) پنل را بفرستید (مثلاً https://panel.example.com:2053).\n\n".
             'برای لغو: /cancel',
         );

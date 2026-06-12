@@ -19,6 +19,7 @@ use App\Telegram\Handlers\Admin\AdminUsersHandler;
 // In-bot CRUD: panels
 use App\Telegram\Handlers\Admin\AdminPanelsHandler;
 use App\Telegram\Handlers\Admin\AdminPanelAddHandler;
+use App\Telegram\Handlers\Admin\AdminPanelAddTypeHandler;
 use App\Telegram\Handlers\Admin\AdminPanelViewHandler;
 use App\Telegram\Handlers\Admin\AdminPanelTestHandler;
 use App\Telegram\Handlers\Admin\AdminPanelToggleHandler;
@@ -53,6 +54,7 @@ use App\Telegram\Handlers\IssueNewHandler;
 use App\Telegram\Handlers\MenuHandler;
 use App\Telegram\Handlers\ProfileHandler;
 use App\Telegram\Handlers\ProfileHistoryHandler;
+use App\Telegram\Handlers\ReplyKeyboardRouter;
 use App\Telegram\Handlers\ReferralHandler;
 use App\Telegram\Handlers\RenewHandler;
 use App\Telegram\Handlers\StartHandler;
@@ -112,12 +114,16 @@ $bot->group(function (Nutgram $bot) {
     $bot->onCallbackQueryData(Keyboards::CB_PROFILE, ProfileHandler::class);
     $bot->onCallbackQueryData(Keyboards::CB_CHECK_JOIN, CheckJoinHandler::class);
 
+    // Reply-keyboard mode: route main-menu button TEXT to the matching handler.
+    $bot->onMessage(ReplyKeyboardRouter::class);
+
     /* ------------------------- Admin callbacks ------------------------ */
     $bot->onCallbackQueryData('admin:botpower', AdminBotPowerHandler::class)->middleware(EnsureAdmin::class);
     $bot->onCallbackQueryData('admin:stats', AdminStatsHandler::class)->middleware(EnsureAdmin::class);
     $bot->onCallbackQueryData('admin:settings', AdminSettingsHandler::class)->middleware(EnsureAdmin::class);
     $bot->onCallbackQueryData('admin:toggle:{key}', AdminToggleHandler::class)->middleware(EnsureAdmin::class);
     $bot->onCallbackQueryData('admin:delivery', AdminDeliveryHandler::class)->middleware(EnsureAdmin::class);
+    $bot->onCallbackQueryData('admin:kbmode', \App\Telegram\Handlers\Admin\AdminKeyboardModeHandler::class)->middleware(EnsureAdmin::class);
     $bot->onCallbackQueryData('admin:setpath', AdminSetPathHandler::class)->middleware(EnsureAdmin::class);
     $bot->onCallbackQueryData('admin:users', AdminUsersHandler::class)->middleware(EnsureAdmin::class);
     $bot->onCallbackQueryData('admin:block', AdminBlockHandler::class)->middleware(EnsureAdmin::class);
@@ -130,6 +136,7 @@ $bot->group(function (Nutgram $bot) {
     /* ---- In-bot CRUD: panels ---- */
     $bot->onCallbackQueryData('admin:panels', AdminPanelsHandler::class)->middleware(EnsureAdmin::class);
     $bot->onCallbackQueryData('admin:panels:add', AdminPanelAddHandler::class)->middleware(EnsureAdmin::class);
+    $bot->onCallbackQueryData('admin:panels:addtype:{type}', AdminPanelAddTypeHandler::class)->middleware(EnsureAdmin::class);
     $bot->onCallbackQueryData('admin:panels:view:{id}', AdminPanelViewHandler::class)->middleware(EnsureAdmin::class);
     $bot->onCallbackQueryData('admin:panels:test:{id}', AdminPanelTestHandler::class)->middleware(EnsureAdmin::class);
     $bot->onCallbackQueryData('admin:panels:toggle:{id}', AdminPanelToggleHandler::class)->middleware(EnsureAdmin::class);
