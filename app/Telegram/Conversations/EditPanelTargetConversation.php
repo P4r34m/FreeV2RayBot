@@ -23,7 +23,7 @@ class EditPanelTargetConversation extends Conversation
         }
 
         $prompt = match ($panel->type) {
-            PanelType::ThreeXui => '🔢 شناسه اینباند (inbound_id) را بفرستید (عدد).',
+            PanelType::ThreeXui => '🔢 شناسه‌های اینباند را با کاما جدا کنید بفرستید (مثلاً 1,2,3).',
             PanelType::Remnawave => '🧩 UUIDهای Squad را با کاما جدا کنید بفرستید.',
             PanelType::PasarGuard => '👥 شناسه‌های گروه (group ids) را با کاما جدا کنید بفرستید (عدد).',
         };
@@ -54,13 +54,23 @@ class EditPanelTargetConversation extends Conversation
         $s = $panel->settings ?? [];
 
         if ($panel->type === PanelType::ThreeXui) {
-            if (! ctype_digit($text)) {
-                $bot->sendMessage('فقط عدد بفرستید یا /cancel.');
-                $this->next('capture');
+            $parts = array_filter(array_map('trim', explode(',', $text)), fn ($v) => $v !== '');
+            foreach ($parts as $p) {
+                if (! ctype_digit($p)) {
+                    $bot->sendMessage('شناسه‌ها باید عدد و با کاما جدا باشند (مثلاً 1,2). دوباره یا /cancel.');
+                    $this->next('capture');
 
-                return;
+                    return;
+                }
             }
-            $s['inbound_id'] = (int) $text;
+            $ids = array_values(array_map('intval', $parts));
+            $s['inbound_ids'] = $ids;
+            // keep legacy single inbound_id in sync for back-compat
+            if ($ids !== []) {
+                $s['inbound_id'] = $ids[0];
+            } else {
+                unset($s['inbound_id']);
+            }
         } elseif ($panel->type === PanelType::Remnawave) {
             $s['squad_uuids'] = array_values(array_filter(array_map('trim', explode(',', $text)), fn ($v) => $v !== ''));
         } else {

@@ -52,22 +52,30 @@ final class ThreeXuiDriver extends AbstractPanelDriver
 
     public function createConfig(ConfigSpec $spec): IssuedConfig
     {
-        $inboundId = $this->inboundId();
+        $inboundIds = $this->inboundIds();
         $email = $this->normalizeIdentifier($spec->identifier);
         $uuid = (string) Str::uuid();
         $subId = $this->generateSubId();
 
         $client = $this->buildClient($spec, $email, $uuid, $subId, enable: true);
+        $settings = json_encode(['clients' => [$client]]);
 
-        $response = $this->send('POST', '/panel/api/inbounds/addClient', [
-            'id' => $inboundId,
-            // 3x-ui expects `settings` as a JSON STRING, not a nested object.
-            'settings' => json_encode(['clients' => [$client]]),
-        ]);
+        // Single inbound -> the proven addClient path. Multiple inbounds ->
+        // addClientInbounds (3x-ui v3): same email/uuid/subId across all of them,
+        // aggregated under one /sub/{subId} link.
+        $response = count($inboundIds) === 1
+            ? $this->send('POST', '/panel/api/inbounds/addClient', [
+                'id' => $inboundIds[0],
+                'settings' => $settings, // 3x-ui expects a JSON STRING, not a nested object
+            ])
+            : $this->send('POST', '/panel/api/inbounds/addClientInbounds', [
+                'settings' => $settings,
+                'inboundIds' => $inboundIds,
+            ]);
 
         $data = $this->expectSuccess($response, 'create client', [
             'email' => $email,
-            'inbound_id' => $inboundId,
+            'inbound_ids' => $inboundIds,
         ]);
 
         return new IssuedConfig(
@@ -106,7 +114,7 @@ final class ThreeXuiDriver extends AbstractPanelDriver
         ]);
 
         if ($spec->resetUsage) {
-            $this->resetTraffic($inboundId, $email);
+            $this->resetTraffic($email);
         }
 
         return new IssuedConfig(
@@ -185,7 +193,6 @@ final class ThreeXuiDriver extends AbstractPanelDriver
 
     public function deleteConfig(string $identifier): bool
     {
-        $inboundId = $this->inboundId();
         $email = $this->normalizeIdentifier($identifier);
 
         $current = $this->fetchClient($email);
@@ -198,9 +205,10 @@ final class ThreeXuiDriver extends AbstractPanelDriver
             $this->fail('3x-ui client is missing a uuid; cannot delete.', ['email' => $email]);
         }
 
-        $response = $this->send('POST', "/panel/api/inbounds/{$inboundId}/delClient/{$uuid}");
-
-        $this->expectSuccess($response, 'delete client', ['email' => $email, 'uuid' => $uuid]);
+        // delClient is per-inbound; remove from every configured inbound (best-effort).
+        foreach ($this->inboundIds() as $inboundId) {
+            $this->send('POST', "/panel/api/inbounds/{$inboundId}/delClient/{$uuid}");
+        }
 
         return true;
     }
@@ -495,12 +503,13 @@ final class ThreeXuiDriver extends AbstractPanelDriver
         return null;
     }
 
-    /** POST resetClientTraffic for a single client (best-effort, validated). */
-    private function resetTraffic(int $inboundId, string $email): void
+    /** Reset traffic for the client in every configured inbound (best-effort). */
+    private function resetTraffic(string $email): void
     {
-        $response = $this->send('POST', "/panel/api/inbounds/{$inboundId}/resetClientTraffic/{$email}");
-
-        $this->expectSuccess($response, 'reset traffic', ['email' => $email]);
+        foreach ($this->inboundIds() as $inboundId) {
+            // Best-effort per inbound: a client may not exist in every inbound.
+            $this->send('POST', "/panel/api/inbounds/{$inboundId}/resetClientTraffic/{$email}");
+        }
     }
 
     // ---------------------------------------------------------------------
@@ -561,18 +570,35 @@ final class ThreeXuiDriver extends AbstractPanelDriver
         return Str::lower(Str::random(16));
     }
 
-    /** The required inbound id this driver writes clients into. */
-    private function inboundId(): int
+    /**
+     * Every inbound id this driver writes clients into. Reads the new
+     * `inbound_ids` array, falling back to the legacy single `inbound_id`.
+     *
+     * @return list<int>
+     */
+    private function inboundIds(): array
     {
-        $id = $this->setting('inbound_id');
+        $s = $this->panel->settings ?? [];
+        $raw = $s['inbound_ids'] ?? (isset($s['inbound_id']) ? [$s['inbound_id']] : []);
 
-        if ($id === null || (int) $id <= 0) {
-            $this->fail('3x-ui driver requires a positive inbound_id setting.', [
+        $ids = array_values(array_unique(array_filter(
+            array_map('intval', (array) $raw),
+            fn ($i) => $i > 0,
+        )));
+
+        if ($ids === []) {
+            $this->fail('3x-ui driver requires at least one inbound (از «تنظیمات بیشتر» اینباند را انتخاب کنید).', [
                 'panel_id' => $this->panel->id,
             ]);
         }
 
-        return (int) $id;
+        return $ids;
+    }
+
+    /** First inbound id — for endpoints that operate on a single inbound. */
+    private function inboundId(): int
+    {
+        return $this->inboundIds()[0];
     }
 
     /** Convert a 3x-ui millisecond expiry to a CarbonImmutable (null = no expiry). */

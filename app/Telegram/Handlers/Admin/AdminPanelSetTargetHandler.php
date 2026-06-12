@@ -42,29 +42,36 @@ class AdminPanelSetTargetHandler
 
         $settings = $panel->settings ?? [];
 
-        if ($panel->type === PanelType::ThreeXui) {
-            $settings['inbound_id'] = (int) $target['id'];
-            $panel->update(['settings' => $settings]);
+        $key = match ($panel->type) {
+            PanelType::ThreeXui => 'inbound_ids',
+            PanelType::Remnawave => 'squad_uuids',
+            PanelType::PasarGuard => 'group_ids',
+        };
+        $intKey = $panel->type !== PanelType::Remnawave; // inbound_ids & group_ids are ints
 
-            Reply::toast($bot, 'اینباند انتخاب شد ✅');
-            (new AdminPanelConfigHandler)($bot, (string) $panel->id);
-
-            return;
-        }
-
-        // Multi-select: toggle membership in the array.
-        $key = $panel->type === PanelType::Remnawave ? 'squad_uuids' : 'group_ids';
-        $current = array_map('strval', $settings[$key] ?? []);
+        // Seed 3x-ui from the legacy single inbound_id on the first multi-toggle.
+        $existing = $settings[$key] ?? ($panel->type === PanelType::ThreeXui && isset($settings['inbound_id'])
+            ? [$settings['inbound_id']]
+            : []);
+        $current = array_map('strval', $existing);
         $id = (string) $target['id'];
 
         $current = in_array($id, $current, true)
             ? array_values(array_diff($current, [$id]))
             : [...$current, $id];
 
-        // PasarGuard group ids are integers; Remnawave squad uuids stay strings.
-        $settings[$key] = $panel->type === PanelType::PasarGuard
+        $settings[$key] = $intKey
             ? array_values(array_map('intval', $current))
             : array_values($current);
+
+        // Keep the legacy single inbound_id in sync (first selected) for back-compat.
+        if ($panel->type === PanelType::ThreeXui) {
+            if ($settings['inbound_ids'] !== []) {
+                $settings['inbound_id'] = $settings['inbound_ids'][0];
+            } else {
+                unset($settings['inbound_id']);
+            }
+        }
 
         $panel->update(['settings' => $settings]);
 

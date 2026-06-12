@@ -27,7 +27,9 @@ class AdminPanelConfigHandler
         $s = $panel->settings ?? [];
 
         $target = match ($panel->type) {
-            PanelType::ThreeXui => 'اینباند فعلی: <b>'.($s['inbound_id'] ?? '— انتخاب نشده').'</b>',
+            PanelType::ThreeXui => 'اینباندهای انتخاب‌شده: <b>'.count(
+                $s['inbound_ids'] ?? (isset($s['inbound_id']) ? [$s['inbound_id']] : [])
+            ).'</b>',
             PanelType::Remnawave => 'اسکوادهای انتخاب‌شده: <b>'.count($s['squad_uuids'] ?? []).'</b>',
             PanelType::PasarGuard => 'گروه‌های انتخاب‌شده: <b>'.count($s['group_ids'] ?? []).'</b>',
         };
