@@ -28,6 +28,14 @@ class AdminRuleViewHandler
         $body = "🎁 <b>قانون رفرال</b>\n\n".AdminRulesHandler::label($rule)."\n\nوضعیت: {$state}";
 
         $kb = InlineKeyboardMarkup::make()
+            ->addRow(
+                Btn::make('✏️ نوع قانون', callback_data: 'admin:rules:editfield:'.$rule->id.'_mode'),
+                Btn::make('✏️ آستانه', callback_data: 'admin:rules:editfield:'.$rule->id.'_threshold'),
+            )
+            ->addRow(
+                Btn::make('✏️ نوع پاداش', callback_data: 'admin:rules:editfield:'.$rule->id.'_rewardtype'),
+                Btn::make('✏️ مقدار پاداش', callback_data: 'admin:rules:editfield:'.$rule->id.'_amount'),
+            )
             ->addRow(Btn::make(
                 $rule->is_active ? '🔴 غیرفعال‌کردن' : '🟢 فعال‌کردن',
                 callback_data: 'admin:rules:toggle:'.$rule->id,

@@ -175,6 +175,7 @@ $bot->group(function (Nutgram $bot) {
     $bot->onCallbackQueryData('admin:rules', AdminRulesHandler::class)->middleware(EnsureAdmin::class);
     $bot->onCallbackQueryData('admin:rules:add', fn (Nutgram $bot) => AdminRulesHandler::startAdd($bot))->middleware(EnsureAdmin::class);
     $bot->onCallbackQueryData('admin:rules:view:{id}', AdminRuleViewHandler::class)->middleware(EnsureAdmin::class);
+    $bot->onCallbackQueryData('admin:rules:editfield:{combo}', \App\Telegram\Handlers\Admin\AdminRuleEditFieldHandler::class)->middleware(EnsureAdmin::class);
     $bot->onCallbackQueryData('admin:rules:toggle:{id}', AdminRuleToggleHandler::class)->middleware(EnsureAdmin::class);
     $bot->onCallbackQueryData('admin:rules:del:{id}', AdminRuleDeleteHandler::class)->middleware(EnsureAdmin::class);
 
