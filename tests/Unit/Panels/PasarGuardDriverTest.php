@@ -89,6 +89,36 @@ class PasarGuardDriverTest extends TestCase
         $this->assertSame(1_900_000_000, $issued->expiresAt?->getTimestamp());
     }
 
+    public function test_create_config_sends_empty_proxy_protocols_as_json_objects_not_arrays(): void
+    {
+        Http::fake([
+            self::BASE_URL.'/api/admin/token' => Http::response(['access_token' => 'tok-123']),
+            self::BASE_URL.'/api/user' => Http::response(['username' => 'carol'], 201),
+        ]);
+
+        // An empty protocol entry is exactly what triggered PasarGuard's 422
+        // ("Input should be a valid dictionary or object") in production.
+        $driver = new PasarGuardDriver($this->panel([
+            'group_ids' => [26],
+            'proxy_settings' => ['vless' => ['flow' => ''], 'vmess' => []],
+        ]));
+
+        $driver->createConfig(new ConfigSpec(dataLimitBytes: Bytes::GB, expirySeconds: 3_600, identifier: 'carol'));
+
+        Http::assertSent(function ($request) {
+            if ($request->url() !== self::BASE_URL.'/api/user') {
+                return false;
+            }
+
+            $raw = $request->body();
+
+            // The empty protocol must serialize as {} (object), never [] (array).
+            return str_contains($raw, '"vmess":{}')
+                && ! str_contains($raw, '"vmess":[]')
+                && str_contains($raw, '"vless":{"flow":""}');
+        });
+    }
+
     public function test_get_usage_parses_traffic_limit_and_status(): void
     {
         Http::fake([

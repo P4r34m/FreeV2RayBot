@@ -312,10 +312,35 @@ final class PasarGuardDriver extends AbstractPanelDriver
             'data_limit' => $spec->dataLimitBytes,
             // Unix seconds; 0 when there is no expiry.
             'expire' => $spec->expiresAtUnix(),
-            'proxy_settings' => $this->setting('proxy_settings', ['vless' => ['flow' => ''], 'vmess' => []]),
+            'proxy_settings' => $this->proxySettings(),
             'group_ids' => $this->setting('group_ids', []),
             'note' => $spec->note,
         ];
+    }
+
+    /**
+     * Per-protocol proxy settings for the user. PasarGuard's pydantic model wants
+     * each protocol's value as a JSON OBJECT; an empty PHP array would serialize to
+     * `[]` and be rejected ("Input should be a valid dictionary..."). So we coerce
+     * any empty value — at the top level and per protocol — into an object so `{}`
+     * is sent instead of `[]`.
+     *
+     * @return object|array<string, mixed>
+     */
+    private function proxySettings(): object|array
+    {
+        $raw = $this->setting('proxy_settings', ['vless' => ['flow' => '']]);
+
+        if (! is_array($raw) || $raw === []) {
+            return (object) [];
+        }
+
+        $normalized = [];
+        foreach ($raw as $protocol => $settings) {
+            $normalized[$protocol] = (is_array($settings) && $settings === []) ? (object) [] : $settings;
+        }
+
+        return $normalized;
     }
 
     /**
