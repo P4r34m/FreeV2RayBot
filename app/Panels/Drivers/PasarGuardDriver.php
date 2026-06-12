@@ -235,6 +235,7 @@ final class PasarGuardDriver extends AbstractPanelDriver
     private function dispatch(string $method, string $url, array $payload, string $token): Response
     {
         $client = $this->authedClient($token);
+        $url = $this->endpoint($url); // full URL, preserves any base path
 
         return match ($method) {
             'get' => $client->get($url),
@@ -260,7 +261,7 @@ final class PasarGuardDriver extends AbstractPanelDriver
      */
     private function authenticate(): string
     {
-        $response = $this->client()->asForm()->post('/api/admin/token', [
+        $response = $this->client()->asForm()->post($this->endpoint('/api/admin/token'), [
             'username' => (string) $this->panel->username,
             'password' => (string) $this->panel->password,
         ]);

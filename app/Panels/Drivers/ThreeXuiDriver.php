@@ -313,7 +313,7 @@ final class ThreeXuiDriver extends AbstractPanelDriver
      */
     private function login(): string
     {
-        $response = $this->client()->asForm()->post('/login', [
+        $response = $this->client()->asForm()->post($this->endpoint('/login'), [
             'username' => (string) $this->panel->username,
             'password' => (string) $this->panel->password,
         ]);
@@ -420,12 +420,13 @@ final class ThreeXuiDriver extends AbstractPanelDriver
     private function dispatch(string $method, string $path, array $json): Response
     {
         $client = $this->authedClient();
+        $url = $this->endpoint($path); // full URL, preserves any panel web path
 
         if (strtoupper($method) === 'GET') {
-            return $client->get($path);
+            return $client->get($url);
         }
 
-        return $client->asJson()->send(strtoupper($method), $path, ['json' => $json]);
+        return $client->asJson()->send(strtoupper($method), $url, ['json' => $json]);
     }
 
     /**

@@ -47,6 +47,17 @@ abstract class AbstractPanelDriver implements PanelDriver
     }
 
     /**
+     * Build a FULL absolute URL that preserves the panel's base path. Passing a
+     * full http(s) URL to the HTTP client bypasses baseUrl resolution, so a
+     * 3x-ui web path (e.g. https://ip:port/secretpath) isn't dropped when an
+     * endpoint starts with "/".
+     */
+    protected function endpoint(string $path): string
+    {
+        return rtrim((string) $this->panel->base_url, '/').'/'.ltrim($path, '/');
+    }
+
+    /**
      * Default: no listable targets. Concrete drivers override to fetch inbounds/
      * squads/groups from the panel.
      *

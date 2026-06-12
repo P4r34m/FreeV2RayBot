@@ -258,9 +258,11 @@ final class RemnawaveDriver extends AbstractPanelDriver
         return $this->unwrap($response, $context);
     }
 
-    /** Fire a single HTTP verb against the panel. */
+    /** Fire a single HTTP verb against the panel (full URL preserves any base path). */
     private function send(PendingRequest $client, string $method, string $url, array $body): Response
     {
+        $url = $this->endpoint($url);
+
         return match ($method) {
             'get' => $client->get($url, $body),
             'delete' => $client->delete($url, $body),
