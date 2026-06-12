@@ -82,11 +82,19 @@ class IssueConfigJob implements ShouldQueue
                 chat_id: $this->chatId,
             );
         } catch (Throwable $e) {
-            Log::error('Config issuance failed', [
+            $logContext = [
                 'telegram_id' => $this->telegramId,
                 'mode' => $this->mode,
                 'error' => $e->getMessage(),
-            ]);
+            ];
+
+            // Surface the panel's actual HTTP status/body (otherwise lost) so a
+            // failed issuance is diagnosable from the logs, not just a generic msg.
+            if ($e instanceof \App\Panels\Exceptions\PanelException) {
+                $logContext['panel'] = $e->context;
+            }
+
+            Log::error('Config issuance failed', $logContext);
             $bot->sendMessage(text: Content::text('config.error'), chat_id: $this->chatId);
             $reports->send(ReportService::ERROR, "❌ <b>خطای ساخت کانفیگ</b>\nکاربر: <code>{$this->telegramId}</code>\n".htmlspecialchars($e->getMessage()));
         }
