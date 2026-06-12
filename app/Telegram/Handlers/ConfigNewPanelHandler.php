@@ -26,7 +26,7 @@ class ConfigNewPanelHandler
         $user = $bot->get('botUser');
 
         $activeCount = $user->configs()->where('status', ConfigStatus::Active->value)->count();
-        $max = (int) config('v2raybot.limits.max_active_configs_per_user', 1);
+        $max = $user->maxConfigs();
         if ($activeCount >= $max) {
             Reply::screen($bot, Content::text('config.max_reached', ['max' => $max]), Keyboards::configMenu(true));
 

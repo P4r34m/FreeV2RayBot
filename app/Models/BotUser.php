@@ -22,6 +22,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property int $referral_rewarded_count
  * @property int $bonus_traffic_bytes
  * @property int $bonus_days
+ * @property int|null $max_configs
  */
 class BotUser extends Model
 {
@@ -39,9 +40,19 @@ class BotUser extends Model
             'referral_rewarded_count' => 'integer',
             'bonus_traffic_bytes' => 'integer',
             'bonus_days' => 'integer',
+            'max_configs' => 'integer',
             'last_started_at' => 'datetime',
             'last_active_at' => 'datetime',
         ];
+    }
+
+    /**
+     * How many active configs this user may hold: their per-user override when
+     * set, otherwise the global default.
+     */
+    public function maxConfigs(): int
+    {
+        return $this->max_configs ?? (int) config('v2raybot.limits.max_active_configs_per_user', 1);
     }
 
     public function configs(): HasMany

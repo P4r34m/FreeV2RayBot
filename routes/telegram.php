@@ -139,6 +139,7 @@ $bot->group(function (Nutgram $bot) {
     $bot->onCallbackQueryData('admin:users', AdminUsersHandler::class)->middleware(EnsureAdmin::class);
     $bot->onCallbackQueryData('admin:block', AdminBlockHandler::class)->middleware(EnsureAdmin::class);
     $bot->onCallbackQueryData('admin:unblock', AdminUnblockHandler::class)->middleware(EnsureAdmin::class);
+    $bot->onCallbackQueryData('admin:setlimit', \App\Telegram\Handlers\Admin\AdminSetUserLimitHandler::class)->middleware(EnsureAdmin::class);
     $bot->onCallbackQueryData('admin:addchannel', AdminAddChannelHandler::class)->middleware(EnsureAdmin::class);
     $bot->onCallbackQueryData('admin:channels', AdminChannelsHandler::class)->middleware(EnsureAdmin::class);
     $bot->onCallbackQueryData('admin:setgroup', AdminSetGroupHandler::class)->middleware(EnsureAdmin::class);
