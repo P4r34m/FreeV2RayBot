@@ -6,6 +6,8 @@
 .env.production
 /database/*.sqlite
 /database/*.sqlite-journal
+_commitmsg.txt
+_botcheck.php
 .phpactor.json
 .phpunit.result.cache
 /.codex
