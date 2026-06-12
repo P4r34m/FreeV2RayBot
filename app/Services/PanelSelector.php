@@ -20,13 +20,25 @@ class PanelSelector
             return $panel && $this->isUsable($panel) ? $panel : null;
         }
 
+        return $this->available()->first();
+    }
+
+    /**
+     * All currently usable panels (active, healthy, with capacity), best first.
+     * Used by the user-facing server picker.
+     *
+     * @return \Illuminate\Support\Collection<int, Panel>
+     */
+    public function available(): \Illuminate\Support\Collection
+    {
         return Panel::query()
             ->where('is_active', true)
             ->where(fn ($q) => $q->whereNull('health_status')->orWhere('health_status', 'ok'))
             ->orderByDesc('priority')
             ->orderBy('active_config_count')
             ->get()
-            ->first(fn (Panel $panel) => $panel->hasCapacity());
+            ->filter(fn (Panel $panel) => $panel->hasCapacity())
+            ->values();
     }
 
     protected function isUsable(Panel $panel): bool

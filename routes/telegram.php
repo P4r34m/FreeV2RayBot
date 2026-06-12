@@ -38,6 +38,7 @@ use App\Telegram\Handlers\Admin\AdminPlanViewHandler;
 use App\Telegram\Handlers\Admin\AdminPlanDefaultHandler;
 use App\Telegram\Handlers\Admin\AdminPlanToggleHandler;
 use App\Telegram\Handlers\Admin\AdminPlanDeleteHandler;
+use App\Telegram\Handlers\Admin\AdminPlanEditFieldHandler;
 // In-bot CRUD: referral rules
 use App\Telegram\Handlers\Admin\AdminRulesHandler;
 use App\Telegram\Handlers\Admin\AdminRuleViewHandler;
@@ -55,6 +56,7 @@ use App\Telegram\Handlers\Admin\AdminEditTextHandler;
 use App\Telegram\Handlers\Admin\AdminEditButtonHandler;
 use App\Telegram\Handlers\ChatMemberHandler;
 use App\Telegram\Handlers\CheckJoinHandler;
+use App\Telegram\Handlers\ConfigNewPanelHandler;
 use App\Telegram\Handlers\ConfigStatusHandler;
 use App\Telegram\Handlers\GetConfigHandler;
 use App\Telegram\Handlers\IssueNewHandler;
@@ -112,6 +114,7 @@ $bot->group(function (Nutgram $bot) {
     $bot->onCallbackQueryData(Keyboards::CB_MENU, MenuHandler::class);
     $bot->onCallbackQueryData(Keyboards::CB_GET_CONFIG, GetConfigHandler::class);
     $bot->onCallbackQueryData(Keyboards::CB_CONFIG_NEW, IssueNewHandler::class);
+    $bot->onCallbackQueryData('config:new:{id}', ConfigNewPanelHandler::class);
     $bot->onCallbackQueryData(Keyboards::CB_CONFIG_RENEW, RenewHandler::class);
     $bot->onCallbackQueryData(Keyboards::CB_CONFIG_STATUS, ConfigStatusHandler::class);
     $bot->onCallbackQueryData(Keyboards::CB_TUTORIALS, TutorialsHandler::class);
@@ -163,6 +166,7 @@ $bot->group(function (Nutgram $bot) {
     $bot->onCallbackQueryData('admin:plans:default:{id}', AdminPlanDefaultHandler::class)->middleware(EnsureAdmin::class);
     $bot->onCallbackQueryData('admin:plans:toggle:{id}', AdminPlanToggleHandler::class)->middleware(EnsureAdmin::class);
     $bot->onCallbackQueryData('admin:plans:del:{id}', AdminPlanDeleteHandler::class)->middleware(EnsureAdmin::class);
+    $bot->onCallbackQueryData('admin:plans:editfield:{combo}', AdminPlanEditFieldHandler::class)->middleware(EnsureAdmin::class);
 
     /* ---- In-bot CRUD: referral rules ---- */
     $bot->onCallbackQueryData('admin:rules', AdminRulesHandler::class)->middleware(EnsureAdmin::class);

@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Enums\ConfigStatus;
 use App\Models\BotUser;
 use App\Models\Config;
+use App\Models\Panel;
 use App\Models\Plan;
 use App\Panels\Data\ConfigSpec;
 use App\Panels\Data\IssuedConfig;
@@ -31,14 +32,17 @@ class ConfigIssuanceService
      * @throws NoPanelAvailableException
      * @throws \App\Panels\Exceptions\PanelException
      */
-    public function issueNew(BotUser $user, ?Plan $plan = null): Config
+    public function issueNew(BotUser $user, ?Plan $plan = null, ?Panel $panel = null): Config
     {
-        $plan ??= Plan::default();
-        $panel = $this->selector->select($plan);
+        // Panel may be forced by the user (server picker); otherwise auto-select.
+        $panel ??= $this->selector->select($plan ?? Plan::default());
 
         if (! $panel) {
             throw new NoPanelAvailableException('هیچ سرور فعالی برای ساخت کانفیگ در دسترس نیست.');
         }
+
+        // Resolve the plan (volume/duration) for the chosen panel.
+        $plan ??= $this->planForPanel($panel);
 
         $identifier = $this->generateIdentifier($user);
         [$spec, $bonusBytes, $bonusDays] = $this->buildSpec($user, $plan, $identifier);
@@ -227,6 +231,18 @@ class ConfigIssuanceService
         if ($days > 0) {
             $user->decrement('bonus_days', min($days, $user->bonus_days));
         }
+    }
+
+    /** Plan to use for a panel: a plan restricted to it, else the global default. */
+    protected function planForPanel(Panel $panel): ?Plan
+    {
+        return Plan::query()
+            ->where('is_active', true)
+            ->where('panel_id', $panel->id)
+            ->orderByDesc('is_default')
+            ->orderBy('sort_order')
+            ->first()
+            ?? Plan::default();
     }
 
     protected function generateIdentifier(BotUser $user): string

@@ -41,6 +41,7 @@ class IssueConfigJob implements ShouldQueue
         public string $mode = 'new', // 'new' | 'renew'
         public ?int $configId = null,
         public ?int $planId = null,
+        public ?int $panelId = null, // forced panel (user server picker)
     ) {}
 
     public function handle(
@@ -131,7 +132,8 @@ class IssueConfigJob implements ShouldQueue
     ): Config {
         $isFirstConfig = $user->configs()->count() === 0;
 
-        $config = $issuer->issueNew($user, $plan);
+        $panel = $this->panelId ? \App\Models\Panel::find($this->panelId) : null;
+        $config = $issuer->issueNew($user, $plan, $panel);
 
         // Verify the referral when the invitee's first config is the trigger.
         if ($isFirstConfig && $referrals->qualifyEvent() === 'first_config') {

@@ -46,6 +46,11 @@ class AdminPlanViewHandler
 
         $kb = InlineKeyboardMarkup::make()
             ->addRow(
+                Btn::make('✏️ نام', callback_data: "admin:plans:editfield:{$plan->id}_name"),
+                Btn::make('📦 حجم', callback_data: "admin:plans:editfield:{$plan->id}_data"),
+                Btn::make('⏳ مدت', callback_data: "admin:plans:editfield:{$plan->id}_duration"),
+            )
+            ->addRow(
                 Btn::make('⭐ پیش‌فرض', callback_data: 'admin:plans:default:'.$plan->id),
                 Btn::make($toggleLabel, callback_data: 'admin:plans:toggle:'.$plan->id),
             )
