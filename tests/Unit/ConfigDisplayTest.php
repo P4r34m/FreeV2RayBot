@@ -43,4 +43,14 @@ class ConfigDisplayTest extends TestCase
         $this->assertSame('۰', Bytes::human(0, '۰'));        // a consumed value of 0 = nothing
         $this->assertSame('1 GB', Bytes::human(Bytes::GB));
     }
+
+    public function test_bytes_human_keeps_whole_numbers_intact(): void
+    {
+        // Trailing zeros of a whole number must NOT be stripped (the "100→1" bug).
+        $this->assertSame('100 GB', Bytes::human(100 * Bytes::GB));
+        $this->assertSame('200 GB', Bytes::human(200 * Bytes::GB));
+        $this->assertSame('10 GB', Bytes::human(10 * Bytes::GB));
+        $this->assertSame('500 B', Bytes::human(500));
+        $this->assertSame('1.5 GB', Bytes::human((int) (1.5 * Bytes::GB)));
+    }
 }

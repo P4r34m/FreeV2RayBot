@@ -38,6 +38,12 @@ class Bytes
 
         $formatted = $power === 0 ? (string) $bytes : number_format($value, $value >= 100 ? 0 : 2);
 
-        return rtrim(rtrim($formatted, '0'), '.').' '.$units[$power];
+        // Trim trailing zeros from the DECIMAL part only ("12.50" -> "12.5",
+        // "12.00" -> "12") — never from a whole number ("100" must stay "100").
+        if (str_contains($formatted, '.')) {
+            $formatted = rtrim(rtrim($formatted, '0'), '.');
+        }
+
+        return $formatted.' '.$units[$power];
     }
 }

@@ -38,7 +38,8 @@ class CoinStoreHandler
 
         $kb = InlineKeyboardMarkup::make();
         foreach ($plans as $plan) {
-            $kb->addRow(Btn::make($plan->name.' — '.$plan->label(), callback_data: 'coin:plan:'.$plan->id));
+            // Only the admin-given name on the button; full specs live on the detail screen.
+            $kb->addRow(Btn::make($plan->name, callback_data: 'coin:plan:'.$plan->id));
         }
         $kb->addRow(Keyboards::backButton(Keyboards::CB_REFERRAL));
 
