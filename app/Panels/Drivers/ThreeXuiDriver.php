@@ -176,6 +176,27 @@ final class ThreeXuiDriver extends AbstractPanelDriver
         return true;
     }
 
+    public function rotateSubscription(string $identifier): IssuedConfig
+    {
+        $email = $this->normalizeIdentifier($identifier);
+        $subId = $this->generateSubId();
+
+        // Partial update: only the subId changes; quota/expiry are preserved
+        // server-side. The old sub link dies, the new one points to $subId.
+        $response = $this->send('POST', "/panel/api/clients/update/{$email}", [
+            'email' => $email,
+            'subId' => $subId,
+        ]);
+
+        $this->expectSuccess($response, 'rotate subscription', ['email' => $email]);
+
+        return new IssuedConfig(
+            identifier: $email,
+            subscriptionUrl: $this->buildSubscriptionUrl($subId),
+            subId: $subId,
+        );
+    }
+
     /**
      * List the panel's inbounds so the operator can pick one (the `inbound_id`
      * setting this driver writes into) instead of typing it by hand.

@@ -134,6 +134,34 @@ class ConfigIssuanceService
     }
 
     /**
+     * Rotate a config's subscription link: revoke the old one on the panel and
+     * persist the new URL. Quota, expiry and usage are untouched.
+     *
+     * @throws NoPanelAvailableException
+     * @throws \App\Panels\Exceptions\PanelException
+     */
+    public function rotateSubscription(Config $config): Config
+    {
+        $config->loadMissing('panel');
+
+        if (! $config->panel) {
+            throw new NoPanelAvailableException('سرور این کانفیگ در دسترس نیست.');
+        }
+
+        $issued = $this->panels->driver($config->panel)->rotateSubscription($config->remote_identifier);
+
+        return DB::transaction(function () use ($config, $issued) {
+            $config->update([
+                'subscription_url' => $issued->subscriptionUrl ?: $config->subscription_url,
+                'sub_id' => $issued->subId ?: $config->sub_id,
+                'last_synced_at' => now(),
+            ]);
+
+            return $config->refresh();
+        });
+    }
+
+    /**
      * Immediately push a freshly-granted referral reward onto the user's active
      * config (extends limit/expiry WITHOUT resetting usage). Returns the config
      * it was applied to, or null if there was none (reward stays in the wallet).

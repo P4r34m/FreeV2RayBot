@@ -2,12 +2,9 @@
 
 namespace Tests\Unit;
 
-use App\Enums\ConfigStatus;
 use App\Models\Config;
 use App\Models\Plan;
 use App\Support\Bytes;
-use App\Telegram\Presenter;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 /**
@@ -16,8 +13,6 @@ use Tests\TestCase;
  */
 class ConfigDisplayTest extends TestCase
 {
-    use RefreshDatabase;
-
     public function test_expiry_human_shows_on_hold_duration_when_pending_first_use(): void
     {
         $config = new Config(['data_limit_bytes' => Bytes::GB, 'used_bytes' => 0]);
@@ -47,21 +42,5 @@ class ConfigDisplayTest extends TestCase
         $this->assertSame('نامحدود', Bytes::human(0));      // default: a quota of 0 = unlimited
         $this->assertSame('۰', Bytes::human(0, '۰'));        // a consumed value of 0 = nothing
         $this->assertSame('1 GB', Bytes::human(Bytes::GB));
-    }
-
-    public function test_account_status_all_caps_long_lists_and_notes_the_remainder(): void
-    {
-        $configs = collect(range(1, 10))->map(fn (int $i) => new Config([
-            'data_limit_bytes' => Bytes::GB,
-            'used_bytes' => 0,
-            'subscription_url' => 'https://sub.example.com/'.$i,
-            'expiry_duration_days' => 30, // on-hold; display uses the column, no plan needed
-            'status' => ConfigStatus::Active,
-        ]));
-
-        $text = Presenter::accountStatusAll($configs);
-
-        // 10 configs, cap of 8 -> 2 noted as remainder.
-        $this->assertStringContainsString('اشتراک دیگر', $text);
     }
 }

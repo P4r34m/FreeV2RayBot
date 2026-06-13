@@ -113,6 +113,31 @@ class IssuancePlanResolutionTest extends TestCase
         $this->assertSame(30 * 86400, $holder->renewSpec->expirySeconds);
     }
 
+    public function test_rotate_subscription_persists_the_new_link(): void
+    {
+        $panel = Panel::create([
+            'name' => 'B', 'type' => PanelType::ThreeXui,
+            'base_url' => 'https://b.example.com', 'is_active' => true,
+        ]);
+
+        $user = BotUser::create(['telegram_id' => 600]);
+        $config = $user->configs()->create([
+            'panel_id' => $panel->id,
+            'remote_identifier' => 'fv_600',
+            'sub_id' => 'old',
+            'subscription_url' => 'https://old.example.com/sub/old',
+            'status' => \App\Enums\ConfigStatus::Active,
+        ]);
+
+        $this->captureIssuedSpec($panel); // installs the fake PanelManager
+
+        app(ConfigIssuanceService::class)->rotateSubscription($config);
+
+        $config->refresh();
+        $this->assertSame('https://sub.example.com/rotated', $config->subscription_url);
+        $this->assertSame('newsub', $config->sub_id);
+    }
+
     /**
      * Swap in a fake PanelManager whose driver records the ConfigSpec it is asked
      * to create. Returns a holder whose ->spec is populated once createConfig runs.
@@ -176,6 +201,15 @@ class IssuancePlanResolutionTest extends TestCase
             public function deleteConfig(string $identifier): bool
             {
                 return true;
+            }
+
+            public function rotateSubscription(string $identifier): IssuedConfig
+            {
+                return new IssuedConfig(
+                    identifier: $identifier,
+                    subscriptionUrl: 'https://sub.example.com/rotated',
+                    subId: 'newsub',
+                );
             }
         };
 

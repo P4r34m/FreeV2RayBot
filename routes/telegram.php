@@ -118,6 +118,8 @@ $bot->group(function (Nutgram $bot) {
     $bot->onCallbackQueryData('config:new:{id}', ConfigNewPanelHandler::class);
     $bot->onCallbackQueryData(Keyboards::CB_CONFIG_RENEW, RenewHandler::class);
     $bot->onCallbackQueryData(Keyboards::CB_CONFIG_STATUS, ConfigStatusHandler::class);
+    $bot->onCallbackQueryData('config:view:{id}', \App\Telegram\Handlers\ConfigViewHandler::class);
+    $bot->onCallbackQueryData('config:rotate:{id}', \App\Telegram\Handlers\ConfigRotateHandler::class);
     $bot->onCallbackQueryData(Keyboards::CB_TUTORIALS, TutorialsHandler::class);
     $bot->onCallbackQueryData('tutorial:show:{id}', TutorialShowHandler::class);
     $bot->onCallbackQueryData(Keyboards::CB_REFERRAL, ReferralHandler::class);

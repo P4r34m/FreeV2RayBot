@@ -214,6 +214,29 @@ class ThreeXuiDriverTest extends TestCase
         $this->assertNull($driver->getUsage('ghost'));
     }
 
+    public function test_rotate_subscription_updates_subid_and_builds_a_new_url(): void
+    {
+        Cache::flush();
+
+        Http::fake([
+            '*/panel/api/clients/update/*' => Http::response(['success' => true]),
+        ]);
+
+        $issued = (new ThreeXuiDriver($this->makePanel(['api_token' => 'tok-xyz'])))->rotateSubscription('user-42');
+
+        Http::assertSent(function (Request $request) {
+            if (! str_contains($request->url(), '/panel/api/clients/update/')) {
+                return false;
+            }
+            $body = $request->data();
+
+            return $body['email'] === 'user42' && ! empty($body['subId']);
+        });
+
+        // The new sub URL is built from the freshly generated subId + sub_* settings.
+        $this->assertSame('https://sub.example.com:2096/sub/'.$issued->subId, $issued->subscriptionUrl);
+    }
+
     public function test_create_config_throws_panel_exception_on_unsuccessful_response(): void
     {
         Cache::flush();

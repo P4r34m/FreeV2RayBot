@@ -176,6 +176,20 @@ final class PasarGuardDriver extends AbstractPanelDriver
         return true;
     }
 
+    public function rotateSubscription(string $identifier): IssuedConfig
+    {
+        $username = $this->normalizeIdentifier($identifier);
+
+        // Native revoke: mints a new subscription token (and URL); quota/expiry untouched.
+        $response = $this->request('post', "/api/user/{$username}/revoke_sub");
+
+        if (! $response->successful()) {
+            $this->fail('PasarGuard subscription revoke failed.', $this->errorContext($response, ['username' => $username]));
+        }
+
+        return $this->toIssuedConfig($username, $response->json());
+    }
+
     /**
      * Send an authenticated request, transparently re-authenticating once if the
      * cached token is rejected.

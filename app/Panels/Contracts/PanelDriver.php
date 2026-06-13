@@ -60,4 +60,11 @@ interface PanelDriver
 
     /** Permanently delete a config. Returns true on success (or already gone). */
     public function deleteConfig(string $identifier): bool;
+
+    /**
+     * Rotate the subscription link: revoke the current one and mint a fresh URL
+     * WITHOUT touching quota/expiry. Returns the new subscriptionUrl (and subId
+     * where the panel uses one). Throws PanelException if unsupported.
+     */
+    public function rotateSubscription(string $identifier): IssuedConfig;
 }

@@ -68,6 +68,15 @@ abstract class AbstractPanelDriver implements PanelDriver
         return [];
     }
 
+    /**
+     * Default: subscription rotation isn't supported. Drivers whose panel can
+     * revoke/regenerate a sub link override this.
+     */
+    public function rotateSubscription(string $identifier): \App\Panels\Data\IssuedConfig
+    {
+        throw new PanelException('این پنل از تعویض لینک اشتراک پشتیبانی نمی‌کند.');
+    }
+
     /** Raise a normalized panel error with context for logging. */
     protected function fail(string $message, array $context = [], ?\Throwable $previous = null): never
     {

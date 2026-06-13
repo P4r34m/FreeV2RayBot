@@ -188,6 +188,24 @@ class PasarGuardDriverTest extends TestCase
         $this->assertSame(1_900_000_000, $usage->expiresAt?->getTimestamp());
     }
 
+    public function test_rotate_subscription_calls_revoke_sub_and_returns_the_new_url(): void
+    {
+        Http::fake([
+            self::BASE_URL.'/api/admin/token' => Http::response(['access_token' => 'tok-123']),
+            self::BASE_URL.'/api/user/frank/revoke_sub' => Http::response([
+                'username' => 'frank',
+                'subscription_url' => '/sub/NEWTOKEN',
+            ]),
+        ]);
+
+        $issued = (new PasarGuardDriver($this->panel()))->rotateSubscription('frank');
+
+        Http::assertSent(fn ($request) => $request->url() === self::BASE_URL.'/api/user/frank/revoke_sub'
+            && $request->method() === 'POST');
+
+        $this->assertSame(self::BASE_URL.'/sub/NEWTOKEN', $issued->subscriptionUrl);
+    }
+
     public function test_disabled_admin_login_raises_auth_exception(): void
     {
         // 403 on the token endpoint == disabled admin.
