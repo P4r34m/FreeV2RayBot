@@ -11,7 +11,7 @@ use SergiX44\Nutgram\Nutgram;
 
 /**
  * Admin flow to add a referral rule:
- * mode → threshold → reward type → reward amount → create.
+ * mode → threshold → reward type → reward amount [→ days for "both"] → create.
  */
 class AddRuleConversation extends Conversation
 {
@@ -20,8 +20,11 @@ class AddRuleConversation extends Conversation
 
     public ?int $threshold = null;
 
-    /** 'traffic' | 'duration' */
+    /** 'traffic' | 'duration' | 'both' */
     public ?string $rewardType = null;
+
+    /** Carried between steps for the combined ("both") reward. */
+    public ?int $rewardAmount = null;
 
     public function start(Nutgram $bot): void
     {
@@ -89,7 +92,8 @@ class AddRuleConversation extends Conversation
         $bot->sendMessage(
             "🎁 نوع پاداش را انتخاب کنید:\n".
             "1) حجم\n".
-            "2) زمان\n\n".
+            "2) زمان\n".
+            "3) حجم + زمان\n\n".
             'برای لغو: /cancel'
         );
 
@@ -110,19 +114,20 @@ class AddRuleConversation extends Conversation
         $this->rewardType = match ($text) {
             '1' => RewardType::Traffic->value,
             '2' => RewardType::Duration->value,
+            '3' => RewardType::Both->value,
             default => null,
         };
 
         if ($this->rewardType === null) {
-            $bot->sendMessage('فقط 1 یا 2 ارسال کنید، یا /cancel.');
+            $bot->sendMessage('فقط 1 تا 3 ارسال کنید، یا /cancel.');
             $this->next('captureRewardType');
 
             return;
         }
 
-        $prompt = $this->rewardType === RewardType::Traffic->value
-            ? "📦 مقدار حجم پاداش را به <b>گیگابایت</b> ارسال کنید (مثلاً 10 یا 1.5)."
-            : "📅 مدت زمان پاداش را به <b>روز</b> ارسال کنید (یک عدد).";
+        $prompt = $this->rewardType === RewardType::Duration->value
+            ? '📅 مدت زمان پاداش را به <b>روز</b> ارسال کنید (یک عدد).'
+            : '📦 مقدار حجم پاداش را به <b>گیگابایت</b> ارسال کنید (مثلاً 10 یا 1.5).';
 
         $bot->sendMessage($prompt."\nبرای لغو: /cancel", parse_mode: 'HTML');
 
@@ -140,7 +145,6 @@ class AddRuleConversation extends Conversation
             return;
         }
 
-        // Guard against a corrupted/partial conversation state before enum::from().
         if ($this->mode === null || $this->rewardType === null) {
             $bot->sendMessage('خطای داخلی در روند ساخت قانون. دوباره از ابتدا شروع کنید.');
             $this->end();
@@ -148,38 +152,77 @@ class AddRuleConversation extends Conversation
             return;
         }
 
-        if ($this->rewardType === RewardType::Traffic->value) {
-            if (! is_numeric($text) || (float) $text <= 0) {
-                $bot->sendMessage('مقدار نامعتبر است. یک عدد بزرگ‌تر از صفر (گیگابایت) ارسال کنید یا /cancel.');
-                $this->next('captureAmount');
-
-                return;
-            }
-            $amount = Bytes::fromGb((float) $text);
-        } else {
+        // Duration-only: the amount is days.
+        if ($this->rewardType === RewardType::Duration->value) {
             if (! ctype_digit($text) || (int) $text < 1) {
                 $bot->sendMessage('مقدار نامعتبر است. یک عدد بزرگ‌تر از صفر (روز) ارسال کنید یا /cancel.');
                 $this->next('captureAmount');
 
                 return;
             }
-            $amount = (int) $text;
+
+            $this->createRule($bot, (int) $text);
+
+            return;
         }
 
+        // Traffic or Both: the amount is GB.
+        if (! is_numeric($text) || (float) $text <= 0) {
+            $bot->sendMessage('مقدار نامعتبر است. یک عدد بزرگ‌تر از صفر (گیگابایت) ارسال کنید یا /cancel.');
+            $this->next('captureAmount');
+
+            return;
+        }
+
+        $bytes = Bytes::fromGb((float) $text);
+
+        // Combined reward: capture the time dimension next.
+        if ($this->rewardType === RewardType::Both->value) {
+            $this->rewardAmount = $bytes;
+            $bot->sendMessage("📅 تعداد روز پاداش را ارسال کنید (یک عدد).\nبرای لغو: /cancel");
+            $this->next('captureDays');
+
+            return;
+        }
+
+        $this->createRule($bot, $bytes);
+    }
+
+    public function captureDays(Nutgram $bot): void
+    {
+        $text = trim($bot->message()?->text ?? '');
+
+        if ($text === '/cancel') {
+            $bot->sendMessage('لغو شد.');
+            $this->end();
+
+            return;
+        }
+
+        if (! ctype_digit($text) || (int) $text < 1) {
+            $bot->sendMessage('مقدار نامعتبر است. یک عدد بزرگ‌تر از صفر (روز) ارسال کنید یا /cancel.');
+            $this->next('captureDays');
+
+            return;
+        }
+
+        $this->createRule($bot, (int) $this->rewardAmount, (int) $text);
+    }
+
+    /** Persist the rule and confirm. */
+    private function createRule(Nutgram $bot, int $amount, ?int $days = null): void
+    {
         $rule = ReferralRule::create([
             'mode' => ReferralRuleMode::from($this->mode),
             'threshold' => $this->threshold,
             'reward_type' => RewardType::from($this->rewardType),
             'reward_amount' => $amount,
+            'reward_days' => $days,
             'is_active' => true,
         ]);
 
-        $reward = $rule->reward_type === RewardType::Traffic
-            ? Bytes::human($rule->reward_amount)
-            : $rule->reward_amount.' روز';
-
         $bot->sendMessage(
-            "✅ قانون رفرال اضافه شد.\n{$rule->mode->label()} → {$reward}",
+            "✅ قانون رفرال اضافه شد.\n{$rule->mode->label()} → {$rule->rewardLabel()}",
             parse_mode: 'HTML',
         );
 

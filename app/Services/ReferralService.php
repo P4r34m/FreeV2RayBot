@@ -32,9 +32,7 @@ class ReferralService
             ->orderBy('sort_order')
             ->get()
             ->map(function (ReferralRule $rule) {
-                $reward = $rule->reward_type === RewardType::Traffic
-                    ? \App\Support\Bytes::human($rule->reward_amount)
-                    : $rule->reward_amount.' روز';
+                $reward = $rule->rewardLabel();
 
                 return $rule->mode === ReferralRuleMode::Recurring
                     ? "• به ازای هر {$rule->threshold} زیرمجموعه: {$reward} هدیه"
@@ -165,8 +163,11 @@ class ReferralService
 
                 if ($rule->reward_type === RewardType::Traffic) {
                     $referrer->increment('bonus_traffic_bytes', $rule->reward_amount);
-                } else {
+                } elseif ($rule->reward_type === RewardType::Duration) {
                     $referrer->increment('bonus_days', $rule->reward_amount);
+                } else { // Both: traffic (bytes) + time (days)
+                    $referrer->increment('bonus_traffic_bytes', $rule->reward_amount);
+                    $referrer->increment('bonus_days', (int) $rule->reward_days);
                 }
 
                 $referrer->increment('referral_rewarded_count');

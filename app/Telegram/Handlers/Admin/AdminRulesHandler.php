@@ -61,10 +61,7 @@ class AdminRulesHandler
     public static function label(ReferralRule $rule): string
     {
         $connector = $rule->mode === \App\Enums\ReferralRuleMode::Recurring ? 'هر' : 'در';
-        $reward = $rule->reward_type === RewardType::Traffic
-            ? Bytes::human($rule->reward_amount)
-            : $rule->reward_amount.' روز';
 
-        return $rule->mode->label()." | {$connector} {$rule->threshold} نفر → {$reward}";
+        return $rule->mode->label()." | {$connector} {$rule->threshold} نفر → {$rule->rewardLabel()}";
     }
 }

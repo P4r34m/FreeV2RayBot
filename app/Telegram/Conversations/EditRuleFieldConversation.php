@@ -16,7 +16,7 @@ use SergiX44\Nutgram\Nutgram;
  */
 class EditRuleFieldConversation extends Conversation
 {
-    private const FIELDS = ['mode', 'threshold', 'rewardtype', 'amount'];
+    private const FIELDS = ['mode', 'threshold', 'rewardtype', 'amount', 'days'];
 
     public ?int $ruleId = null;
 
@@ -36,8 +36,9 @@ class EditRuleFieldConversation extends Conversation
         match ($this->field) {
             'mode' => $this->ask($bot, "نوع قانون را انتخاب کنید:\n1) تکرارشونده (هر N نفر)\n2) پلکانی (در رسیدن به N)", 'captureMode'),
             'threshold' => $this->ask($bot, '🔢 آستانه (تعداد نفرات N) را به‌صورت یک عدد ارسال کنید.', 'captureThreshold'),
-            'rewardtype' => $this->ask($bot, "🎁 نوع پاداش را انتخاب کنید:\n1) حجم\n2) زمان", 'captureRewardType'),
+            'rewardtype' => $this->ask($bot, "🎁 نوع پاداش را انتخاب کنید:\n1) حجم\n2) زمان\n3) حجم + زمان", 'captureRewardType'),
             'amount' => $this->ask($bot, $this->amountPrompt($rule), 'captureAmount'),
+            'days' => $this->ask($bot, '📅 روز پاداش را به‌صورت یک عدد ارسال کنید (برای پاداش «حجم + زمان»).', 'captureDays'),
         };
     }
 
@@ -91,11 +92,12 @@ class EditRuleFieldConversation extends Conversation
         $type = match ($text) {
             '1' => RewardType::Traffic,
             '2' => RewardType::Duration,
+            '3' => RewardType::Both,
             default => null,
         };
 
         if ($type === null) {
-            $bot->sendMessage('فقط 1 یا 2 ارسال کنید، یا /cancel.');
+            $bot->sendMessage('فقط 1 تا 3 ارسال کنید، یا /cancel.');
             $this->next('captureRewardType');
 
             return;
@@ -132,15 +134,9 @@ class EditRuleFieldConversation extends Conversation
 
         $text = trim($bot->message()?->text ?? '');
 
-        if ($rule->reward_type === RewardType::Traffic) {
-            if (! is_numeric($text) || (float) $text <= 0) {
-                $bot->sendMessage('مقدار نامعتبر است. یک عدد بزرگ‌تر از صفر (گیگابایت) ارسال کنید یا /cancel.');
-                $this->next('captureAmount');
-
-                return;
-            }
-            $amount = Bytes::fromGb((float) $text);
-        } else {
+        // Duration: amount is days. Traffic and Both: amount is the traffic in GB
+        // (the time dimension of a "both" rule is edited via the days field).
+        if ($rule->reward_type === RewardType::Duration) {
             if (! ctype_digit($text) || (int) $text < 1) {
                 $bot->sendMessage('مقدار نامعتبر است. یک عدد بزرگ‌تر از صفر (روز) ارسال کنید یا /cancel.');
                 $this->next('captureAmount');
@@ -148,9 +144,48 @@ class EditRuleFieldConversation extends Conversation
                 return;
             }
             $amount = (int) $text;
+        } else {
+            if (! is_numeric($text) || (float) $text <= 0) {
+                $bot->sendMessage('مقدار نامعتبر است. یک عدد بزرگ‌تر از صفر (گیگابایت) ارسال کنید یا /cancel.');
+                $this->next('captureAmount');
+
+                return;
+            }
+            $amount = Bytes::fromGb((float) $text);
         }
 
         $rule->reward_amount = $amount;
+        $rule->save();
+
+        $bot->sendMessage($rule->reward_type === RewardType::Both
+            ? '✅ حجم ذخیره شد. برای تعیین روزها، دکمه‌ی «روز پاداش» را بزنید.'
+            : '✅ ذخیره شد.');
+        $this->end();
+    }
+
+    public function captureDays(Nutgram $bot): void
+    {
+        if ($this->cancelled($bot)) {
+            return;
+        }
+
+        $rule = ReferralRule::find($this->ruleId);
+        if (! $rule) {
+            $bot->sendMessage('قانون پیدا نشد.');
+            $this->end();
+
+            return;
+        }
+
+        $text = trim($bot->message()?->text ?? '');
+        if (! ctype_digit($text) || (int) $text < 0) {
+            $bot->sendMessage('مقدار نامعتبر است. یک عدد (روز) ارسال کنید یا /cancel.');
+            $this->next('captureDays');
+
+            return;
+        }
+
+        $rule->reward_days = (int) $text;
         $rule->save();
 
         $bot->sendMessage('✅ ذخیره شد.');
@@ -165,9 +200,9 @@ class EditRuleFieldConversation extends Conversation
 
     private function amountPrompt(ReferralRule $rule): string
     {
-        return $rule->reward_type === RewardType::Traffic
-            ? '📦 مقدار حجم پاداش را به <b>گیگابایت</b> ارسال کنید (مثلاً 10 یا 1.5).'
-            : '📅 مدت زمان پاداش را به <b>روز</b> ارسال کنید (یک عدد).';
+        return $rule->reward_type === RewardType::Duration
+            ? '📅 مدت زمان پاداش را به <b>روز</b> ارسال کنید (یک عدد).'
+            : '📦 مقدار حجم پاداش را به <b>گیگابایت</b> ارسال کنید (مثلاً 10 یا 1.5).';
     }
 
     /** Handle /cancel; returns true when the conversation was ended. */

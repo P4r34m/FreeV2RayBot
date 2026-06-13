@@ -75,6 +75,28 @@ class ReferralServiceTest extends TestCase
         $this->assertSame(Bytes::fromGb(5), $referrer->fresh()->bonus_traffic_bytes);
     }
 
+    public function test_combined_rule_grants_both_traffic_and_days(): void
+    {
+        ReferralRule::create([
+            'name' => 'هر نفر حجم و زمان',
+            'mode' => ReferralRuleMode::Recurring,
+            'threshold' => 1,
+            'reward_type' => RewardType::Both,
+            'reward_amount' => Bytes::fromGb(2), // traffic
+            'reward_days' => 7,                  // time
+            'is_active' => true,
+        ]);
+
+        $referrer = BotUser::create(['telegram_id' => 9100]);
+
+        $this->verifyNewReferral($referrer, 9101);
+
+        $referrer->refresh();
+        $this->assertSame(Bytes::fromGb(2), $referrer->bonus_traffic_bytes);
+        $this->assertSame(7, $referrer->bonus_days);
+        $this->assertSame('2 GB + 7 روز', ReferralRule::first()->rewardLabel());
+    }
+
     private function verifyNewReferral(BotUser $referrer, int $referredTelegramId): void
     {
         $referred = BotUser::create(['telegram_id' => $referredTelegramId]);

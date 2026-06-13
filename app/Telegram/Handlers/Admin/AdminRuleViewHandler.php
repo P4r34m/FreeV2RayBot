@@ -35,7 +35,14 @@ class AdminRuleViewHandler
             ->addRow(
                 Btn::make('✏️ نوع پاداش', callback_data: 'admin:rules:editfield:'.$rule->id.'_rewardtype'),
                 Btn::make('✏️ مقدار پاداش', callback_data: 'admin:rules:editfield:'.$rule->id.'_amount'),
-            )
+            );
+
+        // The time dimension only applies to the combined "حجم + زمان" reward.
+        if ($rule->reward_type === \App\Enums\RewardType::Both) {
+            $kb->addRow(Btn::make('✏️ روز پاداش', callback_data: 'admin:rules:editfield:'.$rule->id.'_days'));
+        }
+
+        $kb
             ->addRow(Btn::make(
                 $rule->is_active ? '🔴 غیرفعال‌کردن' : '🟢 فعال‌کردن',
                 callback_data: 'admin:rules:toggle:'.$rule->id,

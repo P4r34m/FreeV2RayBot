@@ -30,11 +30,17 @@ class ReferralRuleForm
                 Section::make('پاداش')->columns(2)->schema([
                     Select::make('reward_type')->label('نوع پاداش')
                         ->options(RewardType::class)
+                        ->live()
                         ->required(),
                     TextInput::make('reward_amount')->label('مقدار پاداش')
                         ->required()
                         ->numeric()
-                        ->helperText('بایت برای حجم، روز برای زمان'),
+                        ->helperText('برای «حجم» و «حجم + زمان»: بایت — برای «زمان»: روز'),
+                    TextInput::make('reward_days')->label('روز پاداش (فقط برای حجم + زمان)')
+                        ->numeric()
+                        ->minValue(0)
+                        ->visible(fn ($get): bool => $get('reward_type') === RewardType::Both->value)
+                        ->helperText('تعداد روزی که همراه حجم هدیه داده می‌شود'),
                 ]),
 
                 Section::make('وضعیت')->columns(2)->schema([
