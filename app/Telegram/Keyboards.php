@@ -38,10 +38,27 @@ class Keyboards
 
     public const CB_ADMIN = 'admin';
 
+    /**
+     * User main-menu buttons the admin may show/hide, in display order.
+     * slug => [content key, callback data].
+     */
+    public const USER_BUTTONS = [
+        'get_config' => ['menu.get_config', self::CB_GET_CONFIG],
+        'tutorials' => ['menu.tutorials', self::CB_TUTORIALS],
+        'referral' => ['menu.referral', self::CB_REFERRAL],
+        'profile' => ['menu.profile', self::CB_PROFILE],
+    ];
+
     /** Current main-menu button style: 'inline' (glass) or 'reply' (keyboard). */
     public static function mode(): string
     {
         return Setting::string(SettingKey::KEYBOARD_MODE, 'inline') === 'reply' ? 'reply' : 'inline';
+    }
+
+    /** Whether a user main-menu button is currently shown (admin-toggleable, default on). */
+    public static function buttonVisible(string $contentKey): bool
+    {
+        return Setting::bool('menu_visible:'.$contentKey, true);
     }
 
     /**
@@ -50,13 +67,26 @@ class Keyboards
      */
     public static function mainReplyKeyboard(bool $isAdmin = false): ReplyKeyboardMarkup
     {
-        $kb = ReplyKeyboardMarkup::make(resize_keyboard: true, is_persistent: true)
-            ->addRow(KeyboardButton::make(Content::buttonLabel('menu.get_config')))
-            ->addRow(
-                KeyboardButton::make(Content::buttonLabel('menu.tutorials')),
-                KeyboardButton::make(Content::buttonLabel('menu.referral')),
-            )
-            ->addRow(KeyboardButton::make(Content::buttonLabel('menu.profile')));
+        $kb = ReplyKeyboardMarkup::make(resize_keyboard: true, is_persistent: true);
+
+        if (self::buttonVisible('menu.get_config')) {
+            $kb->addRow(KeyboardButton::make(Content::buttonLabel('menu.get_config')));
+        }
+
+        $row = [];
+        if (self::buttonVisible('menu.tutorials')) {
+            $row[] = KeyboardButton::make(Content::buttonLabel('menu.tutorials'));
+        }
+        if (self::buttonVisible('menu.referral')) {
+            $row[] = KeyboardButton::make(Content::buttonLabel('menu.referral'));
+        }
+        if ($row !== []) {
+            $kb->addRow(...$row);
+        }
+
+        if (self::buttonVisible('menu.profile')) {
+            $kb->addRow(KeyboardButton::make(Content::buttonLabel('menu.profile')));
+        }
 
         if ($isAdmin) {
             $kb->addRow(KeyboardButton::make(Content::buttonLabel('menu.admin')));
@@ -68,13 +98,26 @@ class Keyboards
     /** The user-facing main menu (+ admin entry when applicable). */
     public static function mainMenu(bool $isAdmin = false): InlineKeyboardMarkup
     {
-        $kb = InlineKeyboardMarkup::make()
-            ->addRow(Content::button('menu.get_config', self::CB_GET_CONFIG))
-            ->addRow(
-                Content::button('menu.tutorials', self::CB_TUTORIALS),
-                Content::button('menu.referral', self::CB_REFERRAL),
-            )
-            ->addRow(Content::button('menu.profile', self::CB_PROFILE));
+        $kb = InlineKeyboardMarkup::make();
+
+        if (self::buttonVisible('menu.get_config')) {
+            $kb->addRow(Content::button('menu.get_config', self::CB_GET_CONFIG));
+        }
+
+        $row = [];
+        if (self::buttonVisible('menu.tutorials')) {
+            $row[] = Content::button('menu.tutorials', self::CB_TUTORIALS);
+        }
+        if (self::buttonVisible('menu.referral')) {
+            $row[] = Content::button('menu.referral', self::CB_REFERRAL);
+        }
+        if ($row !== []) {
+            $kb->addRow(...$row);
+        }
+
+        if (self::buttonVisible('menu.profile')) {
+            $kb->addRow(Content::button('menu.profile', self::CB_PROFILE));
+        }
 
         if ($isAdmin) {
             $kb->addRow(Content::button('menu.admin', self::CB_ADMIN));

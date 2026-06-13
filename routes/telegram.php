@@ -135,6 +135,8 @@ $bot->group(function (Nutgram $bot) {
     $bot->onCallbackQueryData('admin:toggle:{key}', AdminToggleHandler::class)->middleware(EnsureAdmin::class);
     $bot->onCallbackQueryData('admin:delivery', AdminDeliveryHandler::class)->middleware(EnsureAdmin::class);
     $bot->onCallbackQueryData('admin:kbmode', \App\Telegram\Handlers\Admin\AdminKeyboardModeHandler::class)->middleware(EnsureAdmin::class);
+    $bot->onCallbackQueryData('admin:menubtns', \App\Telegram\Handlers\Admin\AdminMenuButtonsHandler::class)->middleware(EnsureAdmin::class);
+    $bot->onCallbackQueryData('admin:menubtn:{slug}', \App\Telegram\Handlers\Admin\AdminMenuButtonToggleHandler::class)->middleware(EnsureAdmin::class);
     $bot->onCallbackQueryData('admin:setpath', AdminSetPathHandler::class)->middleware(EnsureAdmin::class);
     $bot->onCallbackQueryData('admin:users', AdminUsersHandler::class)->middleware(EnsureAdmin::class);
     $bot->onCallbackQueryData('admin:block', AdminBlockHandler::class)->middleware(EnsureAdmin::class);
