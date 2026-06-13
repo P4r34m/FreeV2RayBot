@@ -4,6 +4,7 @@ namespace App\Telegram\Handlers;
 
 use App\Enums\ConfigStatus;
 use App\Models\BotUser;
+use App\Models\Config;
 use App\Telegram\Content;
 use App\Telegram\Keyboards;
 use App\Telegram\Reply;
@@ -24,6 +25,7 @@ class ConfigStatusHandler
         $configs = $user->configs()
             ->where('status', ConfigStatus::Active->value)
             ->with('panel')
+            ->orderByRaw('CASE WHEN source = ? THEN 0 ELSE 1 END', [Config::SOURCE_FREE]) // free first
             ->latest()
             ->get();
 
@@ -33,13 +35,14 @@ class ConfigStatusHandler
             return;
         }
 
-        // One glass button per subscription, labelled by index (not panel name).
+        // One glass button per subscription, labelled by index + source tag.
         $kb = InlineKeyboardMarkup::make();
         $i = 0;
         foreach ($configs as $config) {
             $i++;
+            $tag = $config->source === Config::SOURCE_COIN ? ' — سکه 🪙' : ' — رایگان';
             $kb->addRow(Btn::make(
-                '🔑 اشتراک '.$i.' — '.$config->limitHuman(),
+                '🔑 اشتراک '.$i.' — '.$config->limitHuman().$tag,
                 callback_data: 'config:view:'.$config->id,
             ));
         }
