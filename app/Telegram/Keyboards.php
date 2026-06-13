@@ -45,6 +45,7 @@ class Keyboards
     public const USER_BUTTONS = [
         'get_config' => ['menu.get_config', self::CB_GET_CONFIG],
         'coin_store' => ['menu.coin_store', 'coin:store'],
+        'my_configs' => ['menu.my_configs', self::CB_CONFIG_STATUS],
         'tutorials' => ['menu.tutorials', self::CB_TUTORIALS],
         'referral' => ['menu.referral', self::CB_REFERRAL],
         'profile' => ['menu.profile', self::CB_PROFILE],
@@ -85,6 +86,10 @@ class Keyboards
             $kb->addRow(KeyboardButton::make(Content::buttonLabel('menu.coin_store')));
         }
 
+        if (self::buttonVisible('menu.my_configs')) {
+            $kb->addRow(KeyboardButton::make(Content::buttonLabel('menu.my_configs')));
+        }
+
         $row = [];
         if (self::buttonVisible('menu.tutorials')) {
             $row[] = KeyboardButton::make(Content::buttonLabel('menu.tutorials'));
@@ -118,6 +123,10 @@ class Keyboards
 
         if (self::coinStoreEnabled()) {
             $kb->addRow(Content::button('menu.coin_store', 'coin:store'));
+        }
+
+        if (self::buttonVisible('menu.my_configs')) {
+            $kb->addRow(Content::button('menu.my_configs', self::CB_CONFIG_STATUS));
         }
 
         $row = [];

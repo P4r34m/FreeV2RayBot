@@ -44,9 +44,11 @@ class CoinExtendListHandler
         }
 
         $kb = InlineKeyboardMarkup::make();
+        $i = 0;
         foreach ($configs as $config) {
+            $i++;
             $kb->addRow(Btn::make(
-                '🔑 '.($config->panel?->name ?? 'اشتراک').' — '.$config->limitHuman(),
+                '🔑 اشتراک '.$i.' — '.$config->limitHuman(),
                 callback_data: 'coin:buyextc:'.$plan->id.'_'.$config->id,
             ));
         }

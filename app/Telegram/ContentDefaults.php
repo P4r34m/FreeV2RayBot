@@ -82,6 +82,7 @@ final class ContentDefaults
             'menu.referral' => '👥 زیرمجموعه‌گیری',
             'menu.profile' => '👤 پروفایل',
             'menu.coin_store' => '🪙 دریافت کانفیگ با سکه',
+            'menu.my_configs' => '🔑 اشتراک‌های من',
             'menu.admin' => '⚙️ پنل مدیریت',
 
             'config.new' => '🆕 دریافت کانفیگ جدید',

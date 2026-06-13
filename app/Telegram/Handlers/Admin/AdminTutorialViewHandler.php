@@ -40,6 +40,11 @@ class AdminTutorialViewHandler
 
         $kb = InlineKeyboardMarkup::make()
             ->addRow(
+                Btn::make('✏️ عنوان', callback_data: 'admin:tutorials:edit:'.$tutorial->id.'_title'),
+                Btn::make('🏷 دسته', callback_data: 'admin:tutorials:edit:'.$tutorial->id.'_category'),
+            )
+            ->addRow(Btn::make('📝 متن', callback_data: 'admin:tutorials:edit:'.$tutorial->id.'_content'))
+            ->addRow(
                 Btn::make($toggleLabel, callback_data: 'admin:tutorials:toggle:'.$tutorial->id),
                 Btn::make('🗑 حذف', callback_data: 'admin:tutorials:del:'.$tutorial->id),
             )

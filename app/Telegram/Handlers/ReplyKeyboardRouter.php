@@ -30,6 +30,7 @@ class ReplyKeyboardRouter
         $map = [
             Content::buttonLabel('menu.get_config') => GetConfigHandler::class,
             Content::buttonLabel('menu.coin_store') => CoinStoreHandler::class,
+            Content::buttonLabel('menu.my_configs') => ConfigStatusHandler::class,
             Content::buttonLabel('menu.tutorials') => TutorialsHandler::class,
             Content::buttonLabel('menu.referral') => ReferralHandler::class,
             Content::buttonLabel('menu.profile') => ProfileHandler::class,

@@ -37,15 +37,15 @@ class IssueNewHandler
      */
     public static function start(Nutgram $bot, BotUser $user): void
     {
-        // Only the FREE config is capped (coin configs don't count), and a
-        // still-running free config blocks a new one until its time is up.
-        $activeFree = $user->configs()
+        // Exactly ONE free config per user (not configurable). A still-running
+        // free config blocks a new one until its time is up; coin configs don't count.
+        $hasRunningFree = $user->configs()
             ->where('status', ConfigStatus::Active->value)
             ->where('source', \App\Models\Config::SOURCE_FREE)
             ->where(fn ($q) => $q->whereNull('expires_at')->orWhere('expires_at', '>', now()))
-            ->count();
+            ->exists();
 
-        if ($activeFree >= $user->maxConfigs()) {
+        if ($hasRunningFree) {
             Reply::screen(
                 $bot,
                 Content::text('config.free_not_expired'),

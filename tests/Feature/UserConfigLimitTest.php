@@ -14,26 +14,16 @@ use SergiX44\Nutgram\Nutgram;
 use Tests\TestCase;
 
 /**
- * A per-user override raises (or lowers) how many active configs a specific user
- * may hold, taking precedence over the global default.
+ * Exactly one free config per user: a still-running free config blocks a new one,
+ * but once it has expired the user can get a fresh one.
  */
 class UserConfigLimitTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_max_configs_uses_override_when_set_else_global_default(): void
-    {
-        config(['v2raybot.limits.max_active_configs_per_user' => 1]);
-
-        $this->assertSame(5, BotUser::create(['telegram_id' => 1, 'max_configs' => 5])->maxConfigs());
-        $this->assertSame(1, BotUser::create(['telegram_id' => 2])->maxConfigs());
-    }
-
-    public function test_user_with_a_raised_limit_can_request_another_config(): void
+    public function test_a_running_free_config_blocks_a_new_one(): void
     {
         Queue::fake();
-        config(['v2raybot.limits.max_active_configs_per_user' => 1]);
-
         $panel = $this->activePanel();
 
         /** @var Nutgram $bot */
@@ -41,32 +31,9 @@ class UserConfigLimitTest extends TestCase
         $bot->willStartConversation();
         $bot->hearText('/start')->reply();
 
-        $user = BotUser::firstOrFail();
-        $user->update(['max_configs' => 3]);
-        $user->configs()->create([
-            'panel_id' => $panel->id, 'remote_identifier' => 'fv_existing', 'status' => ConfigStatus::Active,
-        ]);
-
-        $bot->hearCallbackQueryData('config:new')->reply();
-
-        Queue::assertPushed(IssueConfigJob::class);
-    }
-
-    public function test_user_at_the_default_limit_cannot_request_another_config(): void
-    {
-        Queue::fake();
-        config(['v2raybot.limits.max_active_configs_per_user' => 1]);
-
-        $panel = $this->activePanel();
-
-        /** @var Nutgram $bot */
-        $bot = app(Nutgram::class);
-        $bot->willStartConversation();
-        $bot->hearText('/start')->reply();
-
-        $user = BotUser::firstOrFail();
-        $user->configs()->create([
-            'panel_id' => $panel->id, 'remote_identifier' => 'fv_existing', 'status' => ConfigStatus::Active,
+        BotUser::firstOrFail()->configs()->create([
+            'panel_id' => $panel->id, 'source' => Config::SOURCE_FREE,
+            'remote_identifier' => 'fv_existing', 'status' => ConfigStatus::Active,
         ]);
 
         $bot->hearCallbackQueryData('config:new')->reply();
@@ -77,8 +44,6 @@ class UserConfigLimitTest extends TestCase
     public function test_new_free_config_allowed_once_the_existing_one_has_expired(): void
     {
         Queue::fake();
-        config(['v2raybot.limits.max_active_configs_per_user' => 1]);
-
         $panel = $this->activePanel();
 
         /** @var Nutgram $bot */
@@ -90,6 +55,27 @@ class UserConfigLimitTest extends TestCase
         BotUser::firstOrFail()->configs()->create([
             'panel_id' => $panel->id, 'source' => Config::SOURCE_FREE, 'remote_identifier' => 'fv_old',
             'status' => ConfigStatus::Active, 'expires_at' => now()->subDay(),
+        ]);
+
+        $bot->hearCallbackQueryData('config:new')->reply();
+
+        Queue::assertPushed(IssueConfigJob::class);
+    }
+
+    public function test_coin_configs_do_not_block_a_free_config(): void
+    {
+        Queue::fake();
+        $panel = $this->activePanel();
+
+        /** @var Nutgram $bot */
+        $bot = app(Nutgram::class);
+        $bot->willStartConversation();
+        $bot->hearText('/start')->reply();
+
+        // A running COIN config must not count against the single free config.
+        BotUser::firstOrFail()->configs()->create([
+            'panel_id' => $panel->id, 'source' => Config::SOURCE_COIN, 'remote_identifier' => 'fv_coin',
+            'status' => ConfigStatus::Active, 'expires_at' => now()->addDays(30),
         ]);
 
         $bot->hearCallbackQueryData('config:new')->reply();

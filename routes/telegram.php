@@ -153,7 +153,6 @@ $bot->group(function (Nutgram $bot) {
     $bot->onCallbackQueryData('admin:users', AdminUsersHandler::class)->middleware(EnsureAdmin::class);
     $bot->onCallbackQueryData('admin:block', AdminBlockHandler::class)->middleware(EnsureAdmin::class);
     $bot->onCallbackQueryData('admin:unblock', AdminUnblockHandler::class)->middleware(EnsureAdmin::class);
-    $bot->onCallbackQueryData('admin:setlimit', \App\Telegram\Handlers\Admin\AdminSetUserLimitHandler::class)->middleware(EnsureAdmin::class);
     $bot->onCallbackQueryData('admin:addcoins', fn (Nutgram $bot) => \App\Telegram\Handlers\Admin\AdminUsersHandler::startGrantCoins($bot))->middleware(EnsureAdmin::class);
     $bot->onCallbackQueryData('admin:refmode', \App\Telegram\Handlers\Admin\AdminReferralModeHandler::class)->middleware(EnsureAdmin::class);
     $bot->onCallbackQueryData('admin:setcoins', function (Nutgram $bot) {
@@ -188,6 +187,7 @@ $bot->group(function (Nutgram $bot) {
     $bot->onCallbackQueryData('admin:coinplans:view:{id}', \App\Telegram\Handlers\Admin\AdminCoinPlanViewHandler::class)->middleware(EnsureAdmin::class);
     $bot->onCallbackQueryData('admin:coinplans:toggle:{id}', \App\Telegram\Handlers\Admin\AdminCoinPlanToggleHandler::class)->middleware(EnsureAdmin::class);
     $bot->onCallbackQueryData('admin:coinplans:del:{id}', \App\Telegram\Handlers\Admin\AdminCoinPlanDeleteHandler::class)->middleware(EnsureAdmin::class);
+    $bot->onCallbackQueryData('admin:coinplans:edit:{combo}', \App\Telegram\Handlers\Admin\AdminCoinPlanEditFieldHandler::class)->middleware(EnsureAdmin::class);
 
     $bot->onCallbackQueryData('admin:plans', AdminPlansHandler::class)->middleware(EnsureAdmin::class);
     $bot->onCallbackQueryData('admin:plans:add', AdminPlanAddHandler::class)->middleware(EnsureAdmin::class);
@@ -209,6 +209,7 @@ $bot->group(function (Nutgram $bot) {
     $bot->onCallbackQueryData('admin:tutorials', AdminTutorialsHandler::class)->middleware(EnsureAdmin::class);
     $bot->onCallbackQueryData('admin:tutorials:add', fn (Nutgram $bot) => AdminTutorialsHandler::startAdd($bot))->middleware(EnsureAdmin::class);
     $bot->onCallbackQueryData('admin:tutorials:view:{id}', AdminTutorialViewHandler::class)->middleware(EnsureAdmin::class);
+    $bot->onCallbackQueryData('admin:tutorials:edit:{combo}', \App\Telegram\Handlers\Admin\AdminTutorialEditFieldHandler::class)->middleware(EnsureAdmin::class);
     $bot->onCallbackQueryData('admin:tutorials:toggle:{id}', AdminTutorialToggleHandler::class)->middleware(EnsureAdmin::class);
     $bot->onCallbackQueryData('admin:tutorials:del:{id}', AdminTutorialDeleteHandler::class)->middleware(EnsureAdmin::class);
 

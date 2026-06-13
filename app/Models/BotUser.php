@@ -48,15 +48,6 @@ class BotUser extends Model
         ];
     }
 
-    /**
-     * How many active configs this user may hold: their per-user override when
-     * set, otherwise the global default.
-     */
-    public function maxConfigs(): int
-    {
-        return $this->max_configs ?? (int) config('v2raybot.limits.max_active_configs_per_user', 1);
-    }
-
     public function configs(): HasMany
     {
         return $this->hasMany(Config::class);

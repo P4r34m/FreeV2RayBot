@@ -31,6 +31,14 @@ class AdminCoinPlanViewHandler
         $body = "🛒 <b>{$plan->name}</b>\n\n📦 حجم: {$volume}\n⏳ مدت: {$duration}\n🪙 قیمت: {$plan->coin_price} سکه\n\nوضعیت: {$state}";
 
         $kb = InlineKeyboardMarkup::make()
+            ->addRow(
+                Btn::make('✏️ نام', callback_data: 'admin:coinplans:edit:'.$plan->id.'_name'),
+                Btn::make('✏️ حجم', callback_data: 'admin:coinplans:edit:'.$plan->id.'_data'),
+            )
+            ->addRow(
+                Btn::make('✏️ مدت', callback_data: 'admin:coinplans:edit:'.$plan->id.'_duration'),
+                Btn::make('✏️ قیمت', callback_data: 'admin:coinplans:edit:'.$plan->id.'_price'),
+            )
             ->addRow(Btn::make(
                 $plan->is_active ? '🔴 غیرفعال‌کردن' : '🟢 فعال‌کردن',
                 callback_data: 'admin:coinplans:toggle:'.$plan->id,

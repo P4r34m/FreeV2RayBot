@@ -33,11 +33,13 @@ class ConfigStatusHandler
             return;
         }
 
-        // One glass button per subscription; tapping opens its detail view.
+        // One glass button per subscription, labelled by index (not panel name).
         $kb = InlineKeyboardMarkup::make();
+        $i = 0;
         foreach ($configs as $config) {
+            $i++;
             $kb->addRow(Btn::make(
-                '🔑 '.($config->panel?->name ?? 'اشتراک').' — '.$config->limitHuman(),
+                '🔑 اشتراک '.$i.' — '.$config->limitHuman(),
                 callback_data: 'config:view:'.$config->id,
             ));
         }
