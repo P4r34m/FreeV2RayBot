@@ -44,6 +44,7 @@ class Keyboards
      */
     public const USER_BUTTONS = [
         'get_config' => ['menu.get_config', self::CB_GET_CONFIG],
+        'coin_store' => ['menu.coin_store', 'coin:store'],
         'tutorials' => ['menu.tutorials', self::CB_TUTORIALS],
         'referral' => ['menu.referral', self::CB_REFERRAL],
         'profile' => ['menu.profile', self::CB_PROFILE],
@@ -61,6 +62,13 @@ class Keyboards
         return Setting::bool('menu_visible:'.$contentKey, true);
     }
 
+    /** The coin store entry only appears in coin mode (and when not hidden). */
+    public static function coinStoreEnabled(): bool
+    {
+        return self::buttonVisible('menu.coin_store')
+            && app(\App\Services\ReferralService::class)->mode() === 'coin';
+    }
+
     /**
      * Main menu as a persistent reply keyboard. Button presses arrive as text and
      * are routed by ReplyKeyboardRouter. (Premium-emoji icons are inline-only.)
@@ -71,6 +79,10 @@ class Keyboards
 
         if (self::buttonVisible('menu.get_config')) {
             $kb->addRow(KeyboardButton::make(Content::buttonLabel('menu.get_config')));
+        }
+
+        if (self::coinStoreEnabled()) {
+            $kb->addRow(KeyboardButton::make(Content::buttonLabel('menu.coin_store')));
         }
 
         $row = [];
@@ -102,6 +114,10 @@ class Keyboards
 
         if (self::buttonVisible('menu.get_config')) {
             $kb->addRow(Content::button('menu.get_config', self::CB_GET_CONFIG));
+        }
+
+        if (self::coinStoreEnabled()) {
+            $kb->addRow(Content::button('menu.coin_store', 'coin:store'));
         }
 
         $row = [];

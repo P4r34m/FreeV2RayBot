@@ -25,13 +25,13 @@ class ConfigNewPanelHandler
         /** @var BotUser $user */
         $user = $bot->get('botUser');
 
-        $activeCount = $user->configs()
+        $activeFree = $user->configs()
             ->where('status', ConfigStatus::Active->value)
             ->where('source', \App\Models\Config::SOURCE_FREE)
+            ->where(fn ($q) => $q->whereNull('expires_at')->orWhere('expires_at', '>', now()))
             ->count();
-        $max = $user->maxConfigs();
-        if ($activeCount >= $max) {
-            Reply::screen($bot, Content::text('config.max_reached', ['max' => $max]), Keyboards::configMenu(true));
+        if ($activeFree >= $user->maxConfigs()) {
+            Reply::screen($bot, Content::text('config.free_not_expired'), Keyboards::configMenu(true));
 
             return;
         }

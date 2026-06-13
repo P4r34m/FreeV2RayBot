@@ -22,6 +22,13 @@ class EditButtonConversation extends Conversation
 
     public function start(Nutgram $bot): void
     {
+        // Launched from the glass list with a key already chosen → straight to label.
+        if ($this->key !== '') {
+            $this->promptLabel($bot);
+
+            return;
+        }
+
         $bot->sendMessage(
             "🔘 کلید دکمه را بفرستید (مثل <code>menu.get_config</code>).\n".
             'برای دیدن همه‌ی کلیدها از «لیست کلیدها» استفاده کنید.'."\n\n".
@@ -30,6 +37,22 @@ class EditButtonConversation extends Conversation
         );
 
         $this->next('captureKey');
+    }
+
+    /** Show the current label and ask for the new one. */
+    private function promptLabel(Nutgram $bot): void
+    {
+        $current = BotButton::where('key', $this->key)->value('label')
+            ?? ContentDefaults::buttons()[$this->key]
+            ?? '';
+
+        $bot->sendMessage(
+            "🔹 عنوان فعلی دکمه <code>{$this->key}</code>: {$current}\n\n".
+            "عنوان جدید دکمه را بفرستید.\n\nبرای لغو: /cancel",
+            parse_mode: 'HTML',
+        );
+
+        $this->next('captureLabel');
     }
 
     public function captureKey(Nutgram $bot): void
@@ -54,18 +77,7 @@ class EditButtonConversation extends Conversation
         }
 
         $this->key = $text;
-
-        $current = BotButton::where('key', $text)->value('label')
-            ?? ContentDefaults::buttons()[$text]
-            ?? '';
-
-        $bot->sendMessage(
-            "🔹 عنوان فعلی دکمه <code>{$this->key}</code>: {$current}\n\n".
-            "عنوان جدید دکمه را بفرستید.\n\nبرای لغو: /cancel",
-            parse_mode: 'HTML',
-        );
-
-        $this->next('captureLabel');
+        $this->promptLabel($bot);
     }
 
     public function captureLabel(Nutgram $bot): void

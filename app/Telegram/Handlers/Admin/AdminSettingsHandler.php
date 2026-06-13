@@ -34,6 +34,8 @@ class AdminSettingsHandler
             ->addRow(Btn::make("📦 نحوه تحویل: {$delivery}", callback_data: 'admin:delivery'))
             ->addRow(Btn::make('⌨️ نوع دکمه‌ها: '.(\App\Telegram\Keyboards::mode() === 'reply' ? 'کیبوردی' : 'شیشه‌ای'), callback_data: 'admin:kbmode'))
             ->addRow(Btn::make('👁 نمایش دکمه‌های کاربر', callback_data: 'admin:menubtns'))
+            ->addRow(Btn::make('♻️ حالت رفرال: '.(Setting::string(SettingKey::REFERRAL_MODE, 'reward') === 'coin' ? 'سکه‌ای 🪙' : 'پاداش 🎁'), callback_data: 'admin:refmode'))
+            ->addRow(Btn::make('🪙 سکه به ازای هر دعوت: '.Setting::int(SettingKey::REFERRAL_COINS_PER_INVITE, 1), callback_data: 'admin:setcoins'))
             ->addRow(Btn::make('🔐 مسیر (path) پنل وب: /'.\App\Support\PanelConfig::path(), callback_data: 'admin:setpath'))
             ->addRow(Btn::make('📨 تنظیم گروه گزارشات', callback_data: 'admin:setgroup'))
             ->addRow(Btn::make('🧵 ساخت تاپیک‌های گزارش', callback_data: 'admin:maketopics'))

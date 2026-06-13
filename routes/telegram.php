@@ -149,6 +149,12 @@ $bot->group(function (Nutgram $bot) {
     $bot->onCallbackQueryData('admin:block', AdminBlockHandler::class)->middleware(EnsureAdmin::class);
     $bot->onCallbackQueryData('admin:unblock', AdminUnblockHandler::class)->middleware(EnsureAdmin::class);
     $bot->onCallbackQueryData('admin:setlimit', \App\Telegram\Handlers\Admin\AdminSetUserLimitHandler::class)->middleware(EnsureAdmin::class);
+    $bot->onCallbackQueryData('admin:addcoins', fn (Nutgram $bot) => \App\Telegram\Handlers\Admin\AdminUsersHandler::startGrantCoins($bot))->middleware(EnsureAdmin::class);
+    $bot->onCallbackQueryData('admin:refmode', \App\Telegram\Handlers\Admin\AdminReferralModeHandler::class)->middleware(EnsureAdmin::class);
+    $bot->onCallbackQueryData('admin:setcoins', function (Nutgram $bot) {
+        \App\Telegram\Reply::toast($bot);
+        $bot->getContainer()->get(\App\Telegram\Conversations\SetCoinsPerInviteConversation::class)($bot);
+    })->middleware(EnsureAdmin::class);
     $bot->onCallbackQueryData('admin:addchannel', AdminAddChannelHandler::class)->middleware(EnsureAdmin::class);
     $bot->onCallbackQueryData('admin:channels', AdminChannelsHandler::class)->middleware(EnsureAdmin::class);
     $bot->onCallbackQueryData('admin:setgroup', AdminSetGroupHandler::class)->middleware(EnsureAdmin::class);
@@ -206,6 +212,7 @@ $bot->group(function (Nutgram $bot) {
     $bot->onCallbackQueryData('admin:content:keys', AdminContentKeysHandler::class)->middleware(EnsureAdmin::class);
     $bot->onCallbackQueryData('admin:content:edittext', AdminEditTextHandler::class)->middleware(EnsureAdmin::class);
     $bot->onCallbackQueryData('admin:content:editbtn', AdminEditButtonHandler::class)->middleware(EnsureAdmin::class);
+    $bot->onCallbackQueryData('admin:content:editbtn:{key}', fn (Nutgram $bot, string $key) => AdminEditButtonHandler::editKey($bot, $key))->middleware(EnsureAdmin::class);
 
     $bot->onCallbackQueryData(Keyboards::CB_ADMIN, AdminMenuHandler::class)->middleware(EnsureAdmin::class);
 })

@@ -6,6 +6,7 @@ use App\Enums\ConfigStatus;
 use App\Enums\PanelType;
 use App\Jobs\IssueConfigJob;
 use App\Models\BotUser;
+use App\Models\Config;
 use App\Models\Panel;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Queue;
@@ -71,6 +72,29 @@ class UserConfigLimitTest extends TestCase
         $bot->hearCallbackQueryData('config:new')->reply();
 
         Queue::assertNotPushed(IssueConfigJob::class);
+    }
+
+    public function test_new_free_config_allowed_once_the_existing_one_has_expired(): void
+    {
+        Queue::fake();
+        config(['v2raybot.limits.max_active_configs_per_user' => 1]);
+
+        $panel = $this->activePanel();
+
+        /** @var Nutgram $bot */
+        $bot = app(Nutgram::class);
+        $bot->willStartConversation();
+        $bot->hearText('/start')->reply();
+
+        // An active but EXPIRED free config must not block a fresh free config.
+        BotUser::firstOrFail()->configs()->create([
+            'panel_id' => $panel->id, 'source' => Config::SOURCE_FREE, 'remote_identifier' => 'fv_old',
+            'status' => ConfigStatus::Active, 'expires_at' => now()->subDay(),
+        ]);
+
+        $bot->hearCallbackQueryData('config:new')->reply();
+
+        Queue::assertPushed(IssueConfigJob::class);
     }
 
     private function activePanel(): Panel

@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Setting;
+use App\Support\SettingKey;
 use App\Telegram\Keyboards;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use SergiX44\Nutgram\Telegram\Types\Keyboard\InlineKeyboardMarkup;
@@ -36,6 +37,15 @@ class MenuVisibilityTest extends TestCase
         $this->assertContains(Keyboards::CB_GET_CONFIG, $cbs);
         $this->assertContains(Keyboards::CB_TUTORIALS, $cbs);
         $this->assertContains(Keyboards::CB_PROFILE, $cbs);
+    }
+
+    public function test_coin_store_button_appears_only_in_coin_mode(): void
+    {
+        Setting::put(SettingKey::REFERRAL_MODE, 'reward');
+        $this->assertNotContains('coin:store', $this->callbacks(Keyboards::mainMenu()));
+
+        Setting::put(SettingKey::REFERRAL_MODE, 'coin');
+        $this->assertContains('coin:store', $this->callbacks(Keyboards::mainMenu()));
     }
 
     /** @return list<string> every callback_data in the keyboard */

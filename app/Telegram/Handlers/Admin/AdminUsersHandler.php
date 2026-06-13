@@ -3,6 +3,7 @@
 namespace App\Telegram\Handlers\Admin;
 
 use App\Telegram\Conversations\BlockUserConversation;
+use App\Telegram\Conversations\GrantCoinsConversation;
 use App\Telegram\Conversations\SetUserConfigLimitConversation;
 use App\Telegram\Reply;
 use SergiX44\Nutgram\Nutgram;
@@ -22,6 +23,7 @@ class AdminUsersHandler
                 Btn::make('✅ رفع مسدودی', callback_data: 'admin:unblock'),
             )
             ->addRow(Btn::make('📈 سقف کانفیگ کاربر', callback_data: 'admin:setlimit'))
+            ->addRow(Btn::make('🪙 افزایش/کسر سکه کاربر', callback_data: 'admin:addcoins'))
             ->addRow(Btn::make('🔙 بازگشت', callback_data: 'admin'));
 
         Reply::screen($bot, "⛔️ <b>مدیریت کاربران</b>\nمسدودسازی/رفع مسدودی یا تعیین سقف کانفیگ بر اساس آیدی عددی:", $kb);
@@ -33,6 +35,15 @@ class AdminUsersHandler
 
         /** @var SetUserConfigLimitConversation $conv */
         $conv = $bot->getContainer()->get(SetUserConfigLimitConversation::class);
+        $conv($bot);
+    }
+
+    public static function startGrantCoins(Nutgram $bot): void
+    {
+        Reply::toast($bot);
+
+        /** @var GrantCoinsConversation $conv */
+        $conv = $bot->getContainer()->get(GrantCoinsConversation::class);
         $conv($bot);
     }
 
