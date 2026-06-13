@@ -186,7 +186,7 @@ class IssueConfigJob implements ShouldQueue
             : Content::text('referral.notify');
 
         try {
-            $bot->sendMessage(text: $text, chat_id: $referrer->telegram_id);
+            $bot->sendMessage(text: $text, chat_id: $referrer->telegram_id, parse_mode: 'HTML');
         } catch (Throwable) {
             // Referrer may have blocked the bot; ignore.
         }

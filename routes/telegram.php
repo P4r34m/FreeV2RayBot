@@ -223,6 +223,8 @@ $bot->group(function (Nutgram $bot) {
     $bot->onCallbackQueryData('admin:content', AdminContentHandler::class)->middleware(EnsureAdmin::class);
     $bot->onCallbackQueryData('admin:content:keys', AdminContentKeysHandler::class)->middleware(EnsureAdmin::class);
     $bot->onCallbackQueryData('admin:content:edittext', AdminEditTextHandler::class)->middleware(EnsureAdmin::class);
+    $bot->onCallbackQueryData('admin:content:txtcat:{cat}', fn (Nutgram $bot, string $cat) => AdminEditTextHandler::category($bot, $cat))->middleware(EnsureAdmin::class);
+    $bot->onCallbackQueryData('admin:content:edittext:{key}', fn (Nutgram $bot, string $key) => AdminEditTextHandler::editKey($bot, $key))->middleware(EnsureAdmin::class);
     $bot->onCallbackQueryData('admin:content:editbtn', AdminEditButtonHandler::class)->middleware(EnsureAdmin::class);
     $bot->onCallbackQueryData('admin:content:editbtn:{key}', fn (Nutgram $bot, string $key) => AdminEditButtonHandler::editKey($bot, $key))->middleware(EnsureAdmin::class);
 

@@ -19,6 +19,13 @@ class EditTextConversation extends Conversation
 
     public function start(Nutgram $bot): void
     {
+        // Launched from the glass list with a key already chosen → straight to value.
+        if ($this->key !== '') {
+            $this->promptValue($bot);
+
+            return;
+        }
+
         $bot->sendMessage(
             "✏️ کلید متن را بفرستید (مثل <code>welcome</code>).\n".
             'برای دیدن همه‌ی کلیدها از «لیست کلیدها» استفاده کنید.'."\n\n".
@@ -27,6 +34,26 @@ class EditTextConversation extends Conversation
         );
 
         $this->next('captureKey');
+    }
+
+    /** Show the current value (raw HTML, escaped) and ask for the new one. */
+    private function promptValue(Nutgram $bot): void
+    {
+        $current = BotText::where('key', $this->key)->value('content')
+            ?? ContentDefaults::texts()[$this->key]
+            ?? '';
+
+        $bot->sendMessage(
+            '🔹 مقدار فعلی کلید <code>'.e($this->key)."</code>:\n\n<pre>".e($current).'</pre>',
+            parse_mode: 'HTML',
+        );
+
+        $bot->sendMessage(
+            "متن جدید را بفرستید. (HTML مجاز است؛ برای ایموجی پریمیوم از تگ tg-emoji استفاده کنید.)\n\nبرای لغو: /cancel",
+            parse_mode: 'HTML',
+        );
+
+        $this->next('captureValue');
     }
 
     public function captureKey(Nutgram $bot): void
@@ -51,24 +78,7 @@ class EditTextConversation extends Conversation
         }
 
         $this->key = $text;
-
-        $current = BotText::where('key', $text)->value('content')
-            ?? ContentDefaults::texts()[$text]
-            ?? '';
-
-        // Show the raw HTML source (escaped) so it renders safely even if the
-        // stored content has malformed/edge HTML the admin needs to fix.
-        $bot->sendMessage(
-            '🔹 مقدار فعلی کلید <code>'.e($this->key)."</code>:\n\n<pre>".e($current).'</pre>',
-            parse_mode: 'HTML',
-        );
-
-        $bot->sendMessage(
-            "متن جدید را بفرستید. (HTML مجاز است؛ برای ایموجی پریمیوم از تگ tg-emoji استفاده کنید.)\n\nبرای لغو: /cancel",
-            parse_mode: 'HTML',
-        );
-
-        $this->next('captureValue');
+        $this->promptValue($bot);
     }
 
     public function captureValue(Nutgram $bot): void
