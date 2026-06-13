@@ -145,6 +145,11 @@ $bot->group(function (Nutgram $bot) {
     $bot->onCallbackQueryData('admin:menubtns', \App\Telegram\Handlers\Admin\AdminMenuButtonsHandler::class)->middleware(EnsureAdmin::class);
     $bot->onCallbackQueryData('admin:menubtn:{slug}', \App\Telegram\Handlers\Admin\AdminMenuButtonToggleHandler::class)->middleware(EnsureAdmin::class);
     $bot->onCallbackQueryData('admin:setpath', AdminSetPathHandler::class)->middleware(EnsureAdmin::class);
+    $bot->onCallbackQueryData('admin:txtset', \App\Telegram\Handlers\Admin\AdminTextSettingsHandler::class)->middleware(EnsureAdmin::class);
+    $bot->onCallbackQueryData('admin:txtset:edit:{slug}', fn (Nutgram $bot, string $slug) => \App\Telegram\Handlers\Admin\AdminTextSettingsHandler::edit($bot, $slug))->middleware(EnsureAdmin::class);
+    $bot->onCallbackQueryData('admin:txtset:qualify', fn (Nutgram $bot) => \App\Telegram\Handlers\Admin\AdminTextSettingsHandler::cycleQualify($bot))->middleware(EnsureAdmin::class);
+    $bot->onCallbackQueryData('admin:txtset:plan', fn (Nutgram $bot) => \App\Telegram\Handlers\Admin\AdminTextSettingsHandler::showPlans($bot))->middleware(EnsureAdmin::class);
+    $bot->onCallbackQueryData('admin:txtset:planset:{id}', fn (Nutgram $bot, string $id) => \App\Telegram\Handlers\Admin\AdminTextSettingsHandler::setPlan($bot, $id))->middleware(EnsureAdmin::class);
     $bot->onCallbackQueryData('admin:users', AdminUsersHandler::class)->middleware(EnsureAdmin::class);
     $bot->onCallbackQueryData('admin:block', AdminBlockHandler::class)->middleware(EnsureAdmin::class);
     $bot->onCallbackQueryData('admin:unblock', AdminUnblockHandler::class)->middleware(EnsureAdmin::class);
