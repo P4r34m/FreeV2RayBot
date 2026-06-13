@@ -17,7 +17,16 @@ use SergiX44\Nutgram\Nutgram;
  */
 class AntiSpamMiddleware
 {
+    /** User-facing times are shown in Tehran local time. */
+    private const DISPLAY_TZ = 'Asia/Tehran';
+
     public function __construct(private readonly ReportService $reports) {}
+
+    /** Format a timestamp in Tehran local time. */
+    private function fmt(\Carbon\CarbonInterface $dt): string
+    {
+        return $dt->copy()->setTimezone(self::DISPLAY_TZ)->format('Y-m-d H:i');
+    }
 
     public function __invoke(Nutgram $bot, $next): void
     {
@@ -26,7 +35,7 @@ class AntiSpamMiddleware
         // Enforce an existing temporary block.
         if ($user instanceof BotUser && $user->blocked_until && $user->blocked_until->isFuture()) {
             $bot->sendMessage(Content::text('blocked.temporary', [
-                'until' => $user->blocked_until->format('Y-m-d H:i'),
+                'until' => $this->fmt($user->blocked_until),
             ]));
 
             return;
@@ -70,10 +79,10 @@ class AntiSpamMiddleware
 
             $this->reports->send(
                 ReportService::BLOCKED,
-                "🚫 <b>بلاک موقت (اسپم)</b>\nکاربر: {$user->displayHandle()} (<code>{$user->telegram_id}</code>)\nتا: {$until->format('Y-m-d H:i')}",
+                "🚫 <b>بلاک موقت (اسپم)</b>\nکاربر: {$user->displayHandle()} (<code>{$user->telegram_id}</code>)\nتا: {$this->fmt($until)}",
             );
         }
 
-        $bot->sendMessage(Content::text('blocked.temporary', ['until' => $until->format('Y-m-d H:i')]));
+        $bot->sendMessage(Content::text('blocked.temporary', ['until' => $this->fmt($until)]));
     }
 }
