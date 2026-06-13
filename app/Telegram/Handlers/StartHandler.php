@@ -65,7 +65,11 @@ class StartHandler
         // If referrals are verified on join (not on first config), do it now.
         if ($this->referrals->qualifyEvent() === 'start') {
             $referrer = $this->referrals->verify($user);
-            if ($referrer) {
+
+            // Reward mode pushes the freshly-credited bonus wallet onto the
+            // referrer's config; in coin mode the coins were already granted inside
+            // verify(), so there is nothing to push.
+            if ($referrer && $this->referrals->mode() !== 'coin') {
                 ApplyReferralRewardJob::dispatch($referrer->id);
             }
         }

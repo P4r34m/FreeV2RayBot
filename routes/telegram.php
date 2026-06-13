@@ -99,6 +99,10 @@ $bot->onChatMember(ChatMemberHandler::class);
 $bot->group(function (Nutgram $bot) {
     /* ---------------------------- Commands ---------------------------- */
     $bot->onCommand('start', StartHandler::class)->description('شروع و دریافت منو');
+    // Deep links arrive as "/start <payload>" (e.g. ref_123). Nutgram anchors the
+    // command regex, so plain onCommand('start') does NOT match the payload form —
+    // register the parameterized variant too (StartHandler reads the payload itself).
+    $bot->onCommand('start {payload}', StartHandler::class);
     $bot->onCommand('admin', AdminMenuHandler::class)->middleware(EnsureAdmin::class)->description('پنل مدیریت');
 
     // Quick power commands — work for admins even when the bot is switched off.
