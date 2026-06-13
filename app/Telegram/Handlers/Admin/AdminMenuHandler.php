@@ -29,6 +29,9 @@ class AdminMenuHandler
             )
             ->addRow(
                 Btn::make('🎁 قوانین رفرال', callback_data: 'admin:rules'),
+                Btn::make('🛒 بسته‌های سکه‌ای', callback_data: 'admin:coinplans'),
+            )
+            ->addRow(
                 Btn::make('📚 آموزش‌ها', callback_data: 'admin:tutorials'),
             )
             ->addRow(

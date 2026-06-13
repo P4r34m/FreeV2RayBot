@@ -172,6 +172,12 @@ $bot->group(function (Nutgram $bot) {
     $bot->onCallbackQueryData('admin:panels:editfield:{combo}', AdminPanelEditFieldHandler::class)->middleware(EnsureAdmin::class);
 
     /* ---- In-bot CRUD: plans ---- */
+    $bot->onCallbackQueryData('admin:coinplans', \App\Telegram\Handlers\Admin\AdminCoinPlansHandler::class)->middleware(EnsureAdmin::class);
+    $bot->onCallbackQueryData('admin:coinplans:add', fn (Nutgram $bot) => \App\Telegram\Handlers\Admin\AdminCoinPlansHandler::startAdd($bot))->middleware(EnsureAdmin::class);
+    $bot->onCallbackQueryData('admin:coinplans:view:{id}', \App\Telegram\Handlers\Admin\AdminCoinPlanViewHandler::class)->middleware(EnsureAdmin::class);
+    $bot->onCallbackQueryData('admin:coinplans:toggle:{id}', \App\Telegram\Handlers\Admin\AdminCoinPlanToggleHandler::class)->middleware(EnsureAdmin::class);
+    $bot->onCallbackQueryData('admin:coinplans:del:{id}', \App\Telegram\Handlers\Admin\AdminCoinPlanDeleteHandler::class)->middleware(EnsureAdmin::class);
+
     $bot->onCallbackQueryData('admin:plans', AdminPlansHandler::class)->middleware(EnsureAdmin::class);
     $bot->onCallbackQueryData('admin:plans:add', AdminPlanAddHandler::class)->middleware(EnsureAdmin::class);
     $bot->onCallbackQueryData('admin:plans:view:{id}', AdminPlanViewHandler::class)->middleware(EnsureAdmin::class);
