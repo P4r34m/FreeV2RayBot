@@ -25,9 +25,27 @@ class ReferralService
         return Setting::bool(SettingKey::REFERRAL_ENABLED, true);
     }
 
+    /** Payout model: 'coin' (invites grant coins) or 'reward' (rules grant traffic/days). */
+    public function mode(): string
+    {
+        return Setting::string(SettingKey::REFERRAL_MODE, 'reward') === 'coin' ? 'coin' : 'reward';
+    }
+
+    /** Coins granted per verified invite in coin mode. */
+    public function coinsPerInvite(): int
+    {
+        return max(0, Setting::int(SettingKey::REFERRAL_COINS_PER_INVITE, 0));
+    }
+
     /** Human-readable description of the active reward rules (for the bot). */
     public function describeRules(): string
     {
+        if ($this->mode() === 'coin') {
+            $coins = $this->coinsPerInvite();
+
+            return $coins > 0 ? "🪙 به ازای هر دعوتِ تأییدشده: {$coins} سکه" : '';
+        }
+
         $lines = ReferralRule::where('is_active', true)
             ->orderBy('sort_order')
             ->get()
@@ -106,7 +124,15 @@ class ReferralService
         }
 
         $referrer->increment('referral_count');
-        $this->evaluateRules($referrer->refresh());
+
+        // Coin mode: each verified invite grants coins; reward rules are ignored.
+        if ($this->mode() === 'coin') {
+            if (($coins = $this->coinsPerInvite()) > 0) {
+                $referrer->increment('coins', $coins);
+            }
+        } else {
+            $this->evaluateRules($referrer->refresh());
+        }
 
         return $referrer;
     }

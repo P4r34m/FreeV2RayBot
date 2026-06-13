@@ -37,7 +37,11 @@ class IssueNewHandler
      */
     public static function start(Nutgram $bot, BotUser $user): void
     {
-        $activeCount = $user->configs()->where('status', ConfigStatus::Active->value)->count();
+        // Only the FREE config is capped; coin-bought configs don't count.
+        $activeCount = $user->configs()
+            ->where('status', ConfigStatus::Active->value)
+            ->where('source', \App\Models\Config::SOURCE_FREE)
+            ->count();
         $max = $user->maxConfigs();
 
         if ($activeCount >= $max) {

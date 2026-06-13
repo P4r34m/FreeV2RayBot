@@ -25,7 +25,10 @@ class ConfigNewPanelHandler
         /** @var BotUser $user */
         $user = $bot->get('botUser');
 
-        $activeCount = $user->configs()->where('status', ConfigStatus::Active->value)->count();
+        $activeCount = $user->configs()
+            ->where('status', ConfigStatus::Active->value)
+            ->where('source', \App\Models\Config::SOURCE_FREE)
+            ->count();
         $max = $user->maxConfigs();
         if ($activeCount >= $max) {
             Reply::screen($bot, Content::text('config.max_reached', ['max' => $max]), Keyboards::configMenu(true));

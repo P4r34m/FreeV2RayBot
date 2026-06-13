@@ -123,6 +123,11 @@ $bot->group(function (Nutgram $bot) {
     $bot->onCallbackQueryData(Keyboards::CB_TUTORIALS, TutorialsHandler::class);
     $bot->onCallbackQueryData('tutorial:show:{id}', TutorialShowHandler::class);
     $bot->onCallbackQueryData(Keyboards::CB_REFERRAL, ReferralHandler::class);
+    $bot->onCallbackQueryData('coin:store', \App\Telegram\Handlers\CoinStoreHandler::class);
+    $bot->onCallbackQueryData('coin:plan:{id}', \App\Telegram\Handlers\CoinPlanHandler::class);
+    $bot->onCallbackQueryData('coin:buynew:{id}', \App\Telegram\Handlers\CoinBuyNewHandler::class);
+    $bot->onCallbackQueryData('coin:buyext:{id}', \App\Telegram\Handlers\CoinExtendListHandler::class);
+    $bot->onCallbackQueryData('coin:buyextc:{combo}', \App\Telegram\Handlers\CoinExtendHandler::class);
     $bot->onCallbackQueryData(Keyboards::CB_PROFILE_HISTORY, ProfileHistoryHandler::class);
     $bot->onCallbackQueryData(Keyboards::CB_PROFILE, ProfileHandler::class);
     $bot->onCallbackQueryData(Keyboards::CB_CHECK_JOIN, CheckJoinHandler::class);

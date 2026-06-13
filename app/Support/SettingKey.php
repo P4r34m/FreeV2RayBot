@@ -17,6 +17,13 @@ final class SettingKey
     // When a referral counts toward rewards: 'start' (on join) or 'first_config'.
     public const REFERRAL_QUALIFY_EVENT = 'referral_qualify_event';
 
+    // Referral payout model: 'reward' (rules grant traffic/days) or 'coin'
+    // (each invite grants coins spent in the coin store; reward rules ignored).
+    public const REFERRAL_MODE = 'referral_mode';
+
+    // Coins granted per verified invite when REFERRAL_MODE is 'coin'.
+    public const REFERRAL_COINS_PER_INVITE = 'referral_coins_per_invite';
+
     public const DEFAULT_PLAN_ID = 'default_plan_id';
 
     public const SUPPORT_USERNAME = 'support_username';
@@ -63,6 +70,8 @@ final class SettingKey
             self::CHANNEL_LOCK_ENABLED => false,
             self::REFERRAL_ENABLED => true,
             self::REFERRAL_QUALIFY_EVENT => 'first_config',
+            self::REFERRAL_MODE => 'reward',
+            self::REFERRAL_COINS_PER_INVITE => 1,
             self::DEFAULT_PLAN_ID => null,
             self::SUPPORT_USERNAME => '',
             self::WELCOME_MESSAGE => "به ربات کانفیگ رایگان خوش آمدید 🌐\nبرای دریافت کانفیگ از دکمه‌های زیر استفاده کنید.",

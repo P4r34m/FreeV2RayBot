@@ -22,6 +22,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property int $referral_rewarded_count
  * @property int $bonus_traffic_bytes
  * @property int $bonus_days
+ * @property int $coins
  * @property int|null $max_configs
  */
 class BotUser extends Model
@@ -40,6 +41,7 @@ class BotUser extends Model
             'referral_rewarded_count' => 'integer',
             'bonus_traffic_bytes' => 'integer',
             'bonus_days' => 'integer',
+            'coins' => 'integer',
             'max_configs' => 'integer',
             'last_started_at' => 'datetime',
             'last_active_at' => 'datetime',

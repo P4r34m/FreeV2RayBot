@@ -24,9 +24,14 @@ class GetConfigHandler
         /** @var BotUser $user */
         $user = $bot->get('botUser');
 
-        // With an active config, offer the new/renew/status menu. With none, skip
-        // straight to choosing a server — the user never has to pick a plan.
-        if ($user->configs()->where('status', ConfigStatus::Active->value)->exists()) {
+        // With an active FREE config, offer the new/renew/status menu. With none,
+        // skip straight to choosing a server for the free config.
+        $hasActiveFree = $user->configs()
+            ->where('status', ConfigStatus::Active->value)
+            ->where('source', \App\Models\Config::SOURCE_FREE)
+            ->exists();
+
+        if ($hasActiveFree) {
             Reply::screen($bot, Content::text('config.menu_active'), Keyboards::configMenu(true));
 
             return;

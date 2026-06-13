@@ -28,6 +28,7 @@ class ProfileHandler
             'configs' => $user->configs()->count(),
             'active' => $user->configs()->where('status', ConfigStatus::Active->value)->count(),
             'referrals' => $user->referral_count,
+            'coins' => $user->coins,
             'bonus_traffic' => Bytes::human($user->bonus_traffic_bytes),
             'bonus_days' => $user->bonus_days,
         ]);

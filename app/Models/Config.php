@@ -17,6 +17,11 @@ class Config extends Model
 {
     protected $guarded = ['id'];
 
+    /** How the config was obtained. */
+    public const SOURCE_FREE = 'free';
+
+    public const SOURCE_COIN = 'coin';
+
     protected static function booted(): void
     {
         // Keep the panel's active counter honest when an active config is deleted

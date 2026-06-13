@@ -45,6 +45,8 @@ class ManageSettings extends Page
             SettingKey::DEFAULT_PLAN_ID => Setting::get(SettingKey::DEFAULT_PLAN_ID),
             SettingKey::REFERRAL_ENABLED => Setting::bool(SettingKey::REFERRAL_ENABLED, true),
             SettingKey::REFERRAL_QUALIFY_EVENT => Setting::string(SettingKey::REFERRAL_QUALIFY_EVENT, 'first_config'),
+            SettingKey::REFERRAL_MODE => Setting::string(SettingKey::REFERRAL_MODE, 'reward'),
+            SettingKey::REFERRAL_COINS_PER_INVITE => Setting::int(SettingKey::REFERRAL_COINS_PER_INVITE, 1),
             SettingKey::REFERRAL_INFO_TEXT => Setting::string(SettingKey::REFERRAL_INFO_TEXT),
             SettingKey::CHANNEL_LOCK_ENABLED => Setting::bool(SettingKey::CHANNEL_LOCK_ENABLED),
             SettingKey::MAINTENANCE_MODE => Setting::bool(SettingKey::MAINTENANCE_MODE),
@@ -114,6 +116,11 @@ class ManageSettings extends Page
                             'start' => 'با عضویت در ربات (start)',
                         ]),
                     Toggle::make(SettingKey::REFERRAL_ENABLED)->label('سیستم زیرمجموعه‌گیری فعال باشد'),
+                    Select::make(SettingKey::REFERRAL_MODE)->label('حالت رفرال')
+                        ->options(['reward' => 'پاداش (حجم/زمان)', 'coin' => 'سکه‌ای (فروشگاه)'])
+                        ->helperText('در حالت سکه‌ای، قوانین پاداش نادیده گرفته می‌شوند و هر دعوت سکه می‌دهد.'),
+                    TextInput::make(SettingKey::REFERRAL_COINS_PER_INVITE)->label('سکه به ازای هر دعوت')
+                        ->numeric()->minValue(0),
                     Textarea::make(SettingKey::REFERRAL_INFO_TEXT)->label('متن راهنمای رفرال')
                         ->rows(2)->columnSpanFull(),
                 ]),

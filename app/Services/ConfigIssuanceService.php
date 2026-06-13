@@ -63,6 +63,7 @@ class ConfigIssuanceService
                 $config = $user->configs()->create([
                     'panel_id' => $panel->id,
                     'plan_id' => $plan?->id,
+                    'source' => Config::SOURCE_FREE,
                     'remote_identifier' => $issued->identifier,
                     'remote_uuid' => $issued->remoteUuid,
                     'sub_id' => $issued->subId,
@@ -128,6 +129,103 @@ class ConfigIssuanceService
             ]);
 
             $this->consumeWallet($user, $bonusBytes, $bonusDays);
+
+            return $config->refresh();
+        });
+    }
+
+    /**
+     * Issue a config from an explicit volume/duration package (coin store) on a
+     * chosen panel. Mirrors issueNew but without a Plan; tagged with $source.
+     *
+     * @throws \App\Panels\Exceptions\PanelException
+     */
+    public function issuePackage(BotUser $user, Panel $panel, int $dataLimitBytes, int $durationDays, string $source = Config::SOURCE_COIN): Config
+    {
+        $identifier = $this->generateIdentifier($user);
+        $onHold = (bool) config('v2raybot.issuance.on_hold', true) && $durationDays > 0;
+
+        $spec = new ConfigSpec(
+            dataLimitBytes: $dataLimitBytes,
+            expirySeconds: $durationDays > 0 ? $durationDays * 86400 : 0,
+            identifier: $identifier,
+            note: 'tg:'.$user->telegram_id,
+            onHold: $onHold,
+        );
+
+        $driver = $this->panels->driver($panel);
+        $issued = $driver->createConfig($spec);
+
+        try {
+            return DB::transaction(function () use ($user, $panel, $source, $issued, $spec, $durationDays, $onHold) {
+                $config = $user->configs()->create([
+                    'panel_id' => $panel->id,
+                    'plan_id' => null,
+                    'source' => $source,
+                    'remote_identifier' => $issued->identifier,
+                    'remote_uuid' => $issued->remoteUuid,
+                    'sub_id' => $issued->subId,
+                    'subscription_url' => $issued->subscriptionUrl,
+                    'config_links' => $issued->configLinks ?: null,
+                    'data_limit_bytes' => $issued->dataLimitBytes ?: $spec->dataLimitBytes,
+                    'used_bytes' => 0,
+                    'expires_at' => $issued->expiresAt,
+                    'expiry_duration_days' => $onHold ? $durationDays : null,
+                    'status' => ConfigStatus::Active,
+                    'last_synced_at' => now(),
+                    'panel_response' => $issued->raw ?: null,
+                ]);
+
+                $panel->increment('active_config_count');
+
+                return $config;
+            });
+        } catch (\Throwable $e) {
+            rescue(fn () => $driver->deleteConfig($issued->identifier), report: false);
+            throw $e;
+        }
+    }
+
+    /**
+     * Add volume and/or days to an existing config (coin top-up). Usage is kept;
+     * the config becomes active with an absolute expiry counted from max(now,
+     * current expiry). Adding to an unlimited dimension leaves it unlimited.
+     *
+     * @throws NoPanelAvailableException|\App\Panels\Exceptions\PanelException
+     */
+    public function extendConfig(Config $config, int $addBytes, int $addDays): Config
+    {
+        $config->loadMissing('panel');
+
+        if (! $config->panel) {
+            throw new NoPanelAvailableException('سرور این کانفیگ در دسترس نیست.');
+        }
+
+        $newLimit = $config->data_limit_bytes > 0 ? $config->data_limit_bytes + $addBytes : 0;
+
+        // Extend from whichever is later: now, or the current expiry.
+        $base = max(now()->timestamp, $config->expires_at?->timestamp ?? now()->timestamp);
+        $expirySeconds = $addDays > 0 ? ($base + $addDays * 86400) - now()->timestamp : 0;
+
+        $spec = new ConfigSpec(
+            dataLimitBytes: $newLimit,
+            expirySeconds: $expirySeconds,
+            identifier: $config->remote_identifier,
+            resetUsage: false,
+        );
+
+        $issued = $this->panels->driver($config->panel)->renewConfig($config->remote_identifier, $spec);
+
+        return DB::transaction(function () use ($config, $issued, $newLimit, $expirySeconds) {
+            $config->update([
+                'data_limit_bytes' => $issued->dataLimitBytes ?: $newLimit,
+                'expires_at' => $issued->expiresAt ?? ($expirySeconds > 0 ? now()->addSeconds($expirySeconds) : $config->expires_at),
+                // Now on an absolute expiry, so the on-hold duration no longer applies.
+                'expiry_duration_days' => $expirySeconds > 0 ? null : $config->expiry_duration_days,
+                'status' => ConfigStatus::Active,
+                'last_synced_at' => now(),
+                'subscription_url' => $issued->subscriptionUrl ?: $config->subscription_url,
+            ]);
 
             return $config->refresh();
         });
