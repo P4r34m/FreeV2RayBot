@@ -8,9 +8,9 @@ use SergiX44\Nutgram\Nutgram;
 /** Shared, reusable screens rendered from multiple handlers. */
 class Screens
 {
-    public static function mainMenu(Nutgram $bot, BotUser $user): void
+    public static function mainMenu(Nutgram $bot, BotUser $user, string $welcomeKey = 'welcome'): void
     {
-        $welcome = Content::text('welcome');
+        $welcome = Content::text($welcomeKey);
 
         // Reply keyboards are chat-level and can't ride on editMessageText, so in
         // reply mode we always send a fresh message to (re)set the keyboard.

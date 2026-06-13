@@ -29,6 +29,32 @@ class ReferralStartTest extends TestCase
         $this->assertSame($referrer->id, BotUser::where('telegram_id', 777)->first()?->referred_by);
     }
 
+    public function test_ref_link_start_shows_the_referred_welcome(): void
+    {
+        BotUser::create(['telegram_id' => 900]);
+
+        /** @var Nutgram $bot */
+        $bot = app(Nutgram::class);
+        $bot->hearMessage([
+            'from' => ['id' => 901, 'is_bot' => false, 'first_name' => 'D'],
+            'text' => '/start ref_900',
+        ])->reply();
+
+        $bot->assertReplyText(\App\Telegram\Content::text('welcome_referred'), 0);
+    }
+
+    public function test_plain_start_shows_the_normal_welcome(): void
+    {
+        /** @var Nutgram $bot */
+        $bot = app(Nutgram::class);
+        $bot->hearMessage([
+            'from' => ['id' => 902, 'is_bot' => false, 'first_name' => 'E'],
+            'text' => '/start',
+        ])->reply();
+
+        $bot->assertReplyText(\App\Telegram\Content::text('welcome'), 0);
+    }
+
     public function test_new_user_start_with_ref_link_in_coin_mode_grants_coins_on_start(): void
     {
         Setting::put(SettingKey::REFERRAL_MODE, 'coin');

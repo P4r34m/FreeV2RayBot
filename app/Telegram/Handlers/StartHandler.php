@@ -35,8 +35,9 @@ class StartHandler
         }
 
         // Referral processing must never block the welcome menu.
+        $viaReferral = false;
         try {
-            $this->captureReferral($bot, $user);
+            $viaReferral = $this->captureReferral($bot, $user);
         } catch (\Throwable $e) {
             \Illuminate\Support\Facades\Log::error('Referral capture failed', [
                 'telegram_id' => $user->telegram_id,
@@ -48,16 +49,18 @@ class StartHandler
             return;
         }
 
-        Screens::mainMenu($bot, $user);
+        Screens::mainMenu($bot, $user, $viaReferral ? 'welcome_referred' : 'welcome');
     }
 
-    protected function captureReferral(Nutgram $bot, BotUser $user): void
+    protected function captureReferral(Nutgram $bot, BotUser $user): bool
     {
         $payload = trim(Str::after($bot->message()?->text ?? '', '/start'));
 
+        $viaReferral = false;
         if (str_starts_with($payload, 'ref_')) {
             $referrerId = (int) Str::after($payload, 'ref_');
             if ($referrerId > 0) {
+                $viaReferral = true;
                 $this->referrals->register($user, $referrerId);
             }
         }
@@ -73,5 +76,7 @@ class StartHandler
                 ApplyReferralRewardJob::dispatch($referrer->id);
             }
         }
+
+        return $viaReferral;
     }
 }
