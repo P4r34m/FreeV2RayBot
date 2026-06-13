@@ -18,19 +18,22 @@ class AdminMenuButtonsHandler
 
         $kb = InlineKeyboardMarkup::make();
 
-        foreach (Keyboards::USER_BUTTONS as $slug => [$contentKey, $callback]) {
-            $state = Keyboards::buttonVisible($contentKey) ? '🟢 نمایش' : '🔴 پنهان';
-            $kb->addRow(Btn::make(
-                Content::buttonLabel($contentKey).' — '.$state,
-                callback_data: 'admin:menubtn:'.$slug,
-            ));
+        // Each row: move up / move down / toggle visibility (in current order).
+        foreach (Keyboards::userButtonOrder() as $slug) {
+            [$contentKey] = Keyboards::USER_BUTTONS[$slug];
+            $state = Keyboards::buttonVisible($contentKey) ? '🟢' : '🔴';
+            $kb->addRow(
+                Btn::make('⬆️', callback_data: 'admin:menumove:up_'.$slug),
+                Btn::make('⬇️', callback_data: 'admin:menumove:down_'.$slug),
+                Btn::make($state.' '.Content::buttonLabel($contentKey), callback_data: 'admin:menubtn:'.$slug),
+            );
         }
 
         $kb->addRow(Btn::make('🔙 بازگشت', callback_data: 'admin:settings'));
 
         Reply::screen(
             $bot,
-            "👁 <b>نمایش دکمه‌های کاربر</b>\nبرای پنهان یا آشکار کردن هر دکمه روی آن بزنید:",
+            "👁 <b>دکمه‌های کاربر</b>\n⬆️⬇️ برای جابه‌جایی ترتیب — روی نام دکمه برای نمایش/پنهان‌کردن:",
             $kb,
         );
     }

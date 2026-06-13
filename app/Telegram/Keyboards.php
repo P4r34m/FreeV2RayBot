@@ -70,6 +70,47 @@ class Keyboards
             && app(\App\Services\ReferralService::class)->mode() === 'coin';
     }
 
+    /** Setting key holding the admin-defined main-menu button order (list of slugs). */
+    public const MENU_ORDER_KEY = 'menu_order';
+
+    /**
+     * USER_BUTTONS reordered per the admin-defined order: stored slugs first (in
+     * order), then any remaining defaults. Unknown stored slugs are ignored.
+     *
+     * @return array<string, array{0:string,1:string}> slug => [contentKey, callback]
+     */
+    public static function orderedUserButtons(): array
+    {
+        $stored = Setting::get(self::MENU_ORDER_KEY, []);
+        $stored = is_array($stored) ? $stored : [];
+
+        $ordered = [];
+        foreach ($stored as $slug) {
+            if (isset(self::USER_BUTTONS[$slug]) && ! isset($ordered[$slug])) {
+                $ordered[$slug] = self::USER_BUTTONS[$slug];
+            }
+        }
+        foreach (self::USER_BUTTONS as $slug => $entry) {
+            $ordered[$slug] ??= $entry;
+        }
+
+        return $ordered;
+    }
+
+    /** Ordered list of user-button slugs (for the admin reorder UI). @return list<string> */
+    public static function userButtonOrder(): array
+    {
+        return array_keys(self::orderedUserButtons());
+    }
+
+    /** Whether a given user button should currently render (visibility + mode rules). */
+    private static function userButtonShown(string $slug, string $contentKey): bool
+    {
+        return $slug === 'coin_store'
+            ? self::coinStoreEnabled()
+            : self::buttonVisible($contentKey);
+    }
+
     /**
      * Main menu as a persistent reply keyboard. Button presses arrive as text and
      * are routed by ReplyKeyboardRouter. (Premium-emoji icons are inline-only.)
@@ -78,31 +119,10 @@ class Keyboards
     {
         $kb = ReplyKeyboardMarkup::make(resize_keyboard: true, is_persistent: true);
 
-        if (self::buttonVisible('menu.get_config')) {
-            $kb->addRow(KeyboardButton::make(Content::buttonLabel('menu.get_config')));
-        }
-
-        if (self::coinStoreEnabled()) {
-            $kb->addRow(KeyboardButton::make(Content::buttonLabel('menu.coin_store')));
-        }
-
-        if (self::buttonVisible('menu.my_configs')) {
-            $kb->addRow(KeyboardButton::make(Content::buttonLabel('menu.my_configs')));
-        }
-
-        $row = [];
-        if (self::buttonVisible('menu.tutorials')) {
-            $row[] = KeyboardButton::make(Content::buttonLabel('menu.tutorials'));
-        }
-        if (self::buttonVisible('menu.referral')) {
-            $row[] = KeyboardButton::make(Content::buttonLabel('menu.referral'));
-        }
-        if ($row !== []) {
-            $kb->addRow(...$row);
-        }
-
-        if (self::buttonVisible('menu.profile')) {
-            $kb->addRow(KeyboardButton::make(Content::buttonLabel('menu.profile')));
+        foreach (self::orderedUserButtons() as $slug => [$contentKey, $callback]) {
+            if (self::userButtonShown($slug, $contentKey)) {
+                $kb->addRow(KeyboardButton::make(Content::buttonLabel($contentKey)));
+            }
         }
 
         if ($isAdmin) {
@@ -117,31 +137,10 @@ class Keyboards
     {
         $kb = InlineKeyboardMarkup::make();
 
-        if (self::buttonVisible('menu.get_config')) {
-            $kb->addRow(Content::button('menu.get_config', self::CB_GET_CONFIG));
-        }
-
-        if (self::coinStoreEnabled()) {
-            $kb->addRow(Content::button('menu.coin_store', 'coin:store'));
-        }
-
-        if (self::buttonVisible('menu.my_configs')) {
-            $kb->addRow(Content::button('menu.my_configs', self::CB_CONFIG_STATUS));
-        }
-
-        $row = [];
-        if (self::buttonVisible('menu.tutorials')) {
-            $row[] = Content::button('menu.tutorials', self::CB_TUTORIALS);
-        }
-        if (self::buttonVisible('menu.referral')) {
-            $row[] = Content::button('menu.referral', self::CB_REFERRAL);
-        }
-        if ($row !== []) {
-            $kb->addRow(...$row);
-        }
-
-        if (self::buttonVisible('menu.profile')) {
-            $kb->addRow(Content::button('menu.profile', self::CB_PROFILE));
+        foreach (self::orderedUserButtons() as $slug => [$contentKey, $callback]) {
+            if (self::userButtonShown($slug, $contentKey)) {
+                $kb->addRow(Content::button($contentKey, $callback));
+            }
         }
 
         if ($isAdmin) {

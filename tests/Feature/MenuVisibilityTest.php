@@ -48,6 +48,19 @@ class MenuVisibilityTest extends TestCase
         $this->assertContains('coin:store', $this->callbacks(Keyboards::mainMenu()));
     }
 
+    public function test_menu_order_setting_reorders_buttons(): void
+    {
+        // Default order leads with "get config".
+        $this->assertSame(Keyboards::CB_GET_CONFIG, $this->callbacks(Keyboards::mainMenu())[0]);
+
+        // Put profile first; it should now lead.
+        Setting::put(Keyboards::MENU_ORDER_KEY, ['profile', 'get_config']);
+        $cbs = $this->callbacks(Keyboards::mainMenu());
+
+        $this->assertSame(Keyboards::CB_PROFILE, $cbs[0]);
+        $this->assertContains(Keyboards::CB_GET_CONFIG, $cbs); // others still present
+    }
+
     /** @return list<string> every callback_data in the keyboard */
     private function callbacks(InlineKeyboardMarkup $kb): array
     {
