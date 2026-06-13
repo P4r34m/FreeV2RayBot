@@ -42,9 +42,13 @@ class CoinStoreService
         }
     }
 
-    /** Buy a package as a top-up on an existing config. */
+    /** Buy a package as a top-up on an existing COIN config (the free one stays fixed). */
     public function buyExtend(BotUser $user, CoinPlan $plan, Config $config): Config
     {
+        if ($config->source !== Config::SOURCE_COIN) {
+            throw new \InvalidArgumentException('Only coin configs can be topped up with coins.');
+        }
+
         $this->reserve($user, $plan);
 
         try {

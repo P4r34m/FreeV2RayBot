@@ -112,6 +112,27 @@ class CoinStoreTest extends TestCase
         $this->assertSame(Bytes::fromGb(30), $config->fresh()->data_limit_bytes);
     }
 
+    public function test_buy_extend_rejects_a_free_config_and_does_not_charge(): void
+    {
+        $panel = $this->fakePanel();
+        $user = BotUser::create(['telegram_id' => 8003, 'coins' => 100]);
+        $free = $user->configs()->create([
+            'panel_id' => $panel->id, 'source' => Config::SOURCE_FREE, 'remote_identifier' => 'fv_free',
+            'data_limit_bytes' => Bytes::fromGb(10), 'status' => ConfigStatus::Active,
+        ]);
+        $plan = CoinPlan::create([
+            'name' => 'x', 'data_limit_bytes' => Bytes::fromGb(5), 'duration_days' => 5,
+            'coin_price' => 10, 'is_active' => true,
+        ]);
+
+        try {
+            app(CoinStoreService::class)->buyExtend($user, $plan, $free);
+            $this->fail('Expected the free config to be rejected');
+        } catch (\InvalidArgumentException) {
+            $this->assertSame(100, $user->fresh()->coins); // never charged
+        }
+    }
+
     /** A panel backed by a fake driver that echoes the spec into the IssuedConfig. */
     private function fakePanel(): Panel
     {

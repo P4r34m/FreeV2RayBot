@@ -29,8 +29,10 @@ class CoinExtendListHandler
             return;
         }
 
+        // Coin top-ups apply only to coin configs; the free config stays fixed.
         $configs = $user->configs()
             ->where('status', ConfigStatus::Active->value)
+            ->where('source', \App\Models\Config::SOURCE_COIN)
             ->with('panel')
             ->latest()
             ->get();

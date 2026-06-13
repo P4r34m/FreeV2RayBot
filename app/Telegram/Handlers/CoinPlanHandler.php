@@ -30,11 +30,15 @@ class CoinPlanHandler
             return;
         }
 
-        $hasConfigs = $user->configs()->where('status', ConfigStatus::Active->value)->exists();
+        // Top-ups apply to coin configs only — the free config stays fixed (بدون سکه).
+        $hasCoinConfigs = $user->configs()
+            ->where('status', ConfigStatus::Active->value)
+            ->where('source', \App\Models\Config::SOURCE_COIN)
+            ->exists();
 
         $kb = InlineKeyboardMarkup::make()
             ->addRow(Btn::make('🆕 کانفیگ جدید', callback_data: 'coin:buynew:'.$plan->id));
-        if ($hasConfigs) {
+        if ($hasCoinConfigs) {
             $kb->addRow(Btn::make('➕ افزودن به اشتراک موجود', callback_data: 'coin:buyext:'.$plan->id));
         }
         $kb->addRow(Keyboards::backButton('coin:store'));

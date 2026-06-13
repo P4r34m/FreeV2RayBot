@@ -180,11 +180,13 @@ class IssueConfigJob implements ShouldQueue
             "👥 <b>زیرمجموعه‌ی جدید تأیید شد</b>\nمعرف: {$referrer->displayHandle()} (<code>{$referrer->telegram_id}</code>)\nمجموع: {$referrer->referral_count}",
         );
 
+        $referrals = app(ReferralService::class);
+        $text = $referrals->mode() === 'coin'
+            ? Content::text('referral.notify_coin', ['coins' => $referrals->coinsPerInvite()])
+            : Content::text('referral.notify');
+
         try {
-            $bot->sendMessage(
-                text: Content::text('referral.notify'),
-                chat_id: $referrer->telegram_id,
-            );
+            $bot->sendMessage(text: $text, chat_id: $referrer->telegram_id);
         } catch (Throwable) {
             // Referrer may have blocked the bot; ignore.
         }

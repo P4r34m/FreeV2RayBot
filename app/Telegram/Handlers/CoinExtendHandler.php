@@ -33,6 +33,13 @@ class CoinExtendHandler
             return;
         }
 
+        // Hard guard (even against a crafted callback): the free config stays fixed.
+        if ($config->source !== \App\Models\Config::SOURCE_COIN) {
+            Reply::toast($bot, 'فقط کانفیگ‌های خریداری‌شده با سکه قابل افزایش‌اند.', alert: true);
+
+            return;
+        }
+
         if ($user->coins < $plan->coin_price) {
             Reply::screen(
                 $bot,
