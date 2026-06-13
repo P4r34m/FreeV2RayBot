@@ -36,7 +36,7 @@ class ReferralHandler
             return;
         }
 
-        $link = $this->referralLink($user);
+        $link = $this->referralLink($bot, $user);
         $rules = $this->referrals->describeRules();
         $shareUrl = 'https://t.me/share/url?url='.urlencode($link).'&text='.urlencode(Content::text('referral.share_text'));
 
@@ -64,12 +64,19 @@ class ReferralHandler
         Reply::screen($bot, Presenter::referral($user, $link, $rules), $keyboard);
     }
 
-    protected function referralLink(BotUser $user): string
+    protected function referralLink(Nutgram $bot, BotUser $user): string
     {
-        $username = ltrim(
-            Setting::string(SettingKey::BOT_USERNAME, (string) config('v2raybot.bot.username')),
-            '@'
-        );
+        $username = ltrim(Setting::string(SettingKey::BOT_USERNAME, (string) config('v2raybot.bot.username')), '@');
+
+        // Fall back to the bot's real username (getMe, cached) so the link is never
+        // broken when the BOT_USERNAME setting is empty.
+        if ($username === '') {
+            $username = \Illuminate\Support\Facades\Cache::remember(
+                'bot_username',
+                3600,
+                fn () => (string) ($bot->getMe()?->username ?? ''),
+            );
+        }
 
         return "https://t.me/{$username}?start=ref_{$user->telegram_id}";
     }

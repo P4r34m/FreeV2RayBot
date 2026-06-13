@@ -34,7 +34,15 @@ class StartHandler
             );
         }
 
-        $this->captureReferral($bot, $user);
+        // Referral processing must never block the welcome menu.
+        try {
+            $this->captureReferral($bot, $user);
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('Referral capture failed', [
+                'telegram_id' => $user->telegram_id,
+                'error' => $e->getMessage(),
+            ]);
+        }
 
         if (! ChannelGate::enforce($bot)) {
             return;
