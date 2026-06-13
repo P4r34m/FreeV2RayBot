@@ -45,7 +45,12 @@ class ConfigIssuanceService
         $plan ??= $this->planForPanel($panel);
 
         $identifier = $this->generateIdentifier($user);
-        [$spec, $bonusBytes, $bonusDays] = $this->buildSpec($user, $plan, $identifier);
+        [$spec, $bonusBytes, $bonusDays] = $this->buildSpec(
+            $user,
+            $plan,
+            $identifier,
+            onHold: (bool) config('v2raybot.issuance.on_hold', true),
+        );
 
         $driver = $this->panels->driver($panel);
         $issued = $driver->createConfig($spec);
@@ -66,6 +71,9 @@ class ConfigIssuanceService
                     'data_limit_bytes' => $issued->dataLimitBytes ?: $spec->dataLimitBytes,
                     'used_bytes' => 0,
                     'expires_at' => $issued->expiresAt,
+                    // Capture the on-hold duration so the expiry label survives plan
+                    // edits/deletion (null for absolute-expiry/unlimited configs).
+                    'expiry_duration_days' => $spec->onHold ? (int) round($spec->expirySeconds / 86400) : null,
                     'status' => ConfigStatus::Active,
                     'last_synced_at' => now(),
                     'panel_response' => $issued->raw ?: null,
@@ -199,7 +207,7 @@ class ConfigIssuanceService
      *
      * @return array{0: ConfigSpec, 1: int, 2: int}
      */
-    protected function buildSpec(BotUser $user, ?Plan $plan, string $identifier, bool $resetUsage = true): array
+    protected function buildSpec(BotUser $user, ?Plan $plan, string $identifier, bool $resetUsage = true, bool $onHold = false): array
     {
         $baseBytes = $plan?->data_limit_bytes ?? 0;
         $baseDays = $plan?->duration_days ?? 0;
@@ -216,6 +224,9 @@ class ConfigIssuanceService
             identifier: $identifier,
             note: 'tg:'.$user->telegram_id,
             resetUsage: $resetUsage,
+            // On-hold only matters with a finite duration; an unlimited-time plan
+            // has no timer to defer.
+            onHold: $onHold && $effectiveSeconds > 0,
         );
 
         return [$spec, $bonusBytes, $bonusDays];

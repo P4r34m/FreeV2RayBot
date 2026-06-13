@@ -22,6 +22,14 @@ final readonly class ConfigSpec
         public ?string $note = null,
         /** When renewing, whether to reset the consumed traffic to zero. */
         public bool $resetUsage = true,
+        /**
+         * Create the account "on hold": the expiry timer starts on the user's
+         * FIRST connection, not at creation. expirySeconds is then the duration
+         * counted from first use (drivers map this to their native mechanism:
+         * PasarGuard status=on_hold + on_hold_expire_duration; 3x-ui negative
+         * expiryTime). There is no absolute expiry until the user connects.
+         */
+        public bool $onHold = false,
     ) {}
 
     public function hasDataLimit(): bool
@@ -48,6 +56,7 @@ final readonly class ConfigSpec
             identifier: $identifier,
             note: $this->note,
             resetUsage: $this->resetUsage,
+            onHold: $this->onHold,
         );
     }
 }

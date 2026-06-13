@@ -80,7 +80,8 @@ final class ThreeXuiDriver extends AbstractPanelDriver
             identifier: $email,
             subscriptionUrl: $this->buildSubscriptionUrl($subId),
             configLinks: [],
-            expiresAt: $this->expiryToCarbon($spec->expiresAtUnix() * 1000),
+            // On-hold configs have no absolute expiry until first use.
+            expiresAt: $spec->onHold ? null : $this->expiryToCarbon($spec->expiresAtUnix() * 1000),
             dataLimitBytes: $spec->dataLimitBytes,
             remoteUuid: null,
             subId: $subId,
@@ -440,8 +441,8 @@ final class ThreeXuiDriver extends AbstractPanelDriver
     {
         $client = [
             'email' => $email,
-            'totalGB' => $spec->dataLimitBytes,            // bytes (0 = unlimited)
-            'expiryTime' => $spec->expiresAtUnix() * 1000, // Unix ms (0 = no expiry)
+            'totalGB' => $spec->dataLimitBytes,   // bytes (0 = unlimited)
+            'expiryTime' => $this->expiryMillis($spec),
             'limitIp' => (int) $this->setting('limit_ip', 0),
             'enable' => true,
             'subId' => $subId,
@@ -453,6 +454,22 @@ final class ThreeXuiDriver extends AbstractPanelDriver
         }
 
         return $client;
+    }
+
+    /**
+     * 3x-ui expiryTime in milliseconds: 0 = no expiry, a positive value = absolute
+     * Unix ms, and a NEGATIVE value = a duration that 3x-ui starts counting from
+     * the client's first connection (on-hold).
+     */
+    private function expiryMillis(ConfigSpec $spec): int
+    {
+        if (! $spec->hasExpiry()) {
+            return 0;
+        }
+
+        return $spec->onHold
+            ? -1 * $spec->expirySeconds * 1000
+            : $spec->expiresAtUnix() * 1000;
     }
 
     // ---------------------------------------------------------------------

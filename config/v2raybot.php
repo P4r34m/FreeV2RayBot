@@ -30,6 +30,9 @@ return [
         'default_duration_days' => (int) env('DEFAULT_DURATION_DAYS', 30),
         // Prefix for remote identifiers created on panels.
         'identifier_prefix' => env('CONFIG_IDENTIFIER_PREFIX', 'fv'),
+        // Create new configs "on hold": the duration timer starts on the user's
+        // first connection, not at creation (sensible for free configs).
+        'on_hold' => filter_var(env('ISSUANCE_ON_HOLD', true), FILTER_VALIDATE_BOOL),
     ],
 
     /*

@@ -18,8 +18,14 @@ class ConfigStatusHandler
 
         /** @var BotUser $user */
         $user = $bot->get('botUser');
-        $config = $user->configs()->where('status', ConfigStatus::Active->value)->latest()->first();
 
-        Reply::screen($bot, Presenter::accountStatus($config), Keyboards::configMenu($config !== null));
+        // Show every active config the user holds (a user may have several).
+        $configs = $user->configs()
+            ->where('status', ConfigStatus::Active->value)
+            ->with('plan')
+            ->latest()
+            ->get();
+
+        Reply::screen($bot, Presenter::accountStatusAll($configs), Keyboards::configMenu($configs->isNotEmpty()));
     }
 }

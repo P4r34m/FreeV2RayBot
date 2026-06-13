@@ -305,16 +305,29 @@ final class PasarGuardDriver extends AbstractPanelDriver
      */
     private function userPayload(string $username, ConfigSpec $spec): array
     {
-        return [
+        $payload = [
             'username' => $username,
-            'status' => 'active',
             // Raw bytes; 0 = unlimited (PasarGuard's own convention).
             'data_limit' => $spec->dataLimitBytes,
-            // Unix seconds; 0 when there is no expiry.
-            'expire' => $spec->expiresAtUnix(),
             'proxy_settings' => $this->proxySettings(),
             'group_ids' => $this->setting('group_ids', []),
             'note' => $spec->note,
+        ];
+
+        // On-hold: the expiry timer starts on first connection, so there is no
+        // absolute expire yet — PasarGuard takes a duration instead.
+        if ($spec->onHold) {
+            return $payload + [
+                'status' => 'on_hold',
+                'expire' => 0,
+                'on_hold_expire_duration' => $spec->expirySeconds, // seconds from first use
+            ];
+        }
+
+        return $payload + [
+            'status' => 'active',
+            // Unix seconds; 0 when there is no expiry.
+            'expire' => $spec->expiresAtUnix(),
         ];
     }
 
@@ -381,12 +394,30 @@ final class PasarGuardDriver extends AbstractPanelDriver
         return rtrim($this->panel->base_url, '/').'/'.ltrim($url, '/');
     }
 
-    /** Convert a PasarGuard `expire` (unix seconds, >0) into CarbonImmutable. */
+    /**
+     * Convert a PasarGuard `expire` into CarbonImmutable (null = no expiry).
+     *
+     * Newer PasarGuard returns `expire` as an ISO-8601 string, older/Marzban as a
+     * unix-seconds integer; on-hold users report 0/null. Handle all three — a
+     * blind (int) cast on an ISO string yields a tiny number (→ 1970).
+     */
     private function expiryToCarbon(mixed $expire): ?CarbonImmutable
     {
-        $seconds = (int) $expire;
+        if ($expire === null || $expire === '' || $expire === 0 || $expire === '0') {
+            return null;
+        }
 
-        return $seconds > 0 ? CarbonImmutable::createFromTimestampUTC($seconds) : null;
+        if (is_numeric($expire)) {
+            $seconds = (int) $expire;
+
+            return $seconds > 0 ? CarbonImmutable::createFromTimestampUTC($seconds) : null;
+        }
+
+        try {
+            return CarbonImmutable::parse((string) $expire);
+        } catch (\Throwable) {
+            return null;
+        }
     }
 
     /**

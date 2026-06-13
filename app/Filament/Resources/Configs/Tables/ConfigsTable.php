@@ -39,7 +39,7 @@ class ConfigsTable
                     ->sortable(),
                 TextColumn::make('used_bytes')
                     ->label('مصرف‌شده')
-                    ->formatStateUsing(fn (int $state): string => Bytes::human($state))
+                    ->formatStateUsing(fn (int $state): string => Bytes::human($state, '۰')) // 0 = nothing used
                     ->sortable(),
                 TextColumn::make('expires_at')
                     ->label('تاریخ انقضا')

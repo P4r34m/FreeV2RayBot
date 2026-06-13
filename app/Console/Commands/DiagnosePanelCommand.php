@@ -68,13 +68,17 @@ class DiagnosePanelCommand extends Command
             }
 
             // 3) Optional create — exercises the failing path, then cleans up.
+            //    Mirror the bot's on-hold setting so this reproduces issuance exactly.
             if ($this->option('create')) {
                 $id = 'diag'.random_int(1000, 9999);
+                $onHold = (bool) config('v2raybot.issuance.on_hold', true);
+                $this->line('create mode: '.($onHold ? 'on_hold' : 'active'));
                 try {
                     $issued = $driver->createConfig(new ConfigSpec(
                         dataLimitBytes: 1073741824, // 1 GB
-                        expirySeconds: 86400,
+                        expirySeconds: 30 * 86400,
                         identifier: $id,
+                        onHold: $onHold,
                     ));
                     $this->info('CREATE: ok -> '.$issued->identifier.' | sub='.$issued->subscriptionUrl);
 

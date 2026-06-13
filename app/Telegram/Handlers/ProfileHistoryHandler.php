@@ -2,6 +2,7 @@
 
 namespace App\Telegram\Handlers;
 
+use App\Enums\ConfigStatus;
 use App\Models\BotUser;
 use App\Telegram\Content;
 use App\Telegram\Keyboards;
@@ -17,7 +18,7 @@ class ProfileHistoryHandler
 
         /** @var BotUser $user */
         $user = $bot->get('botUser');
-        $configs = $user->configs()->with('panel')->latest()->limit(10)->get();
+        $configs = $user->configs()->with(['panel', 'plan'])->latest()->limit(10)->get();
 
         $lines = [Content::text('profile.history_header'), ''];
 
@@ -32,6 +33,12 @@ class ProfileHistoryHandler
                     $config->limitHuman(),
                     $config->panel?->name ?? '—',
                 );
+
+                // Surface the link for active subscriptions so the user can grab
+                // all of them from here, not just the latest.
+                if ($config->status === ConfigStatus::Active && $config->subscription_url) {
+                    $lines[] = '<code>'.htmlspecialchars($config->subscription_url, ENT_QUOTES).'</code>';
+                }
             }
         }
 

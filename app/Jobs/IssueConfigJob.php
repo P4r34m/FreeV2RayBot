@@ -113,7 +113,7 @@ class IssueConfigJob implements ShouldQueue
 
                 return Content::text('config.caption_links', [
                     'limit' => $config->limitHuman(),
-                    'expiry' => $config->expires_at?->format('Y-m-d') ?? 'نامحدود ♾',
+                    'expiry' => $config->expiryHuman(),
                     'links' => $rendered,
                 ]);
             }

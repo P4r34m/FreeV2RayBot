@@ -21,11 +21,15 @@ class Bytes
         return $bytes / self::GB;
     }
 
-    /** "12.5 GB", "750 MB", "نامحدود" for 0/negative. */
-    public static function human(int $bytes): string
+    /**
+     * "12.5 GB", "750 MB". For 0/negative returns $zero — defaults to "نامحدود"
+     * (right for a quota/limit); pass "۰" for a consumed/used value where zero
+     * means "nothing used", not "unlimited".
+     */
+    public static function human(int $bytes, string $zero = 'نامحدود'): string
     {
         if ($bytes <= 0) {
-            return 'نامحدود';
+            return $zero;
         }
 
         $units = ['B', 'KB', 'MB', 'GB', 'TB'];

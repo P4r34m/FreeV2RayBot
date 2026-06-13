@@ -119,6 +119,54 @@ class PasarGuardDriverTest extends TestCase
         });
     }
 
+    public function test_create_config_on_hold_sends_on_hold_status_and_duration(): void
+    {
+        Http::fake([
+            self::BASE_URL.'/api/admin/token' => Http::response(['access_token' => 'tok-123']),
+            self::BASE_URL.'/api/user' => Http::response(['username' => 'dan', 'expire' => 0], 201),
+        ]);
+
+        $driver = new PasarGuardDriver($this->panel(['group_ids' => [26]]));
+
+        $issued = $driver->createConfig(new ConfigSpec(
+            dataLimitBytes: Bytes::GB,
+            expirySeconds: 30 * 86_400,
+            identifier: 'dan',
+            onHold: true,
+        ));
+
+        Http::assertSent(function ($request) {
+            if ($request->url() !== self::BASE_URL.'/api/user') {
+                return false;
+            }
+            $b = $request->data();
+
+            return $b['status'] === 'on_hold'
+                && $b['expire'] === 0
+                && $b['on_hold_expire_duration'] === 30 * 86_400;
+        });
+
+        // No absolute expiry until the user first connects.
+        $this->assertNull($issued->expiresAt);
+    }
+
+    public function test_get_usage_parses_iso_expire_string_not_as_1970(): void
+    {
+        Http::fake([
+            self::BASE_URL.'/api/admin/token' => Http::response(['access_token' => 'tok-123']),
+            self::BASE_URL.'/api/user/eve' => Http::response([
+                'used_traffic' => 0,
+                'data_limit' => Bytes::GB,
+                'expire' => '2027-01-01T00:00:00Z', // ISO, not unix seconds
+                'status' => 'active',
+            ]),
+        ]);
+
+        $usage = (new PasarGuardDriver($this->panel()))->getUsage('eve');
+
+        $this->assertSame('2027-01-01', $usage->expiresAt?->format('Y-m-d'));
+    }
+
     public function test_get_usage_parses_traffic_limit_and_status(): void
     {
         Http::fake([

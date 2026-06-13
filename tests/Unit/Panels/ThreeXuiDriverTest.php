@@ -115,6 +115,35 @@ class ThreeXuiDriverTest extends TestCase
             && $request->header('Authorization')[0] === 'Bearer tok-xyz');
     }
 
+    public function test_create_config_on_hold_uses_a_negative_expiry_time(): void
+    {
+        Cache::flush();
+
+        Http::fake([
+            '*/panel/api/clients/add' => Http::response(['success' => true]),
+        ]);
+
+        $driver = new ThreeXuiDriver($this->makePanel(['api_token' => 'tok-xyz']));
+
+        $issued = $driver->createConfig(new ConfigSpec(
+            dataLimitBytes: Bytes::GB,
+            expirySeconds: 30 * 86_400,
+            identifier: 'held',
+            onHold: true,
+        ));
+
+        // A negative expiryTime tells 3x-ui to start the clock on first connection.
+        Http::assertSent(function (Request $request) {
+            if (! str_ends_with($request->url(), '/panel/api/clients/add')) {
+                return false;
+            }
+
+            return $request->data()['client']['expiryTime'] === -1 * 30 * 86_400 * 1000;
+        });
+
+        $this->assertNull($issued->expiresAt);
+    }
+
     public function test_get_usage_sums_up_and_down_and_parses_expiry(): void
     {
         Cache::flush();
@@ -144,6 +173,31 @@ class ThreeXuiDriverTest extends TestCase
         $this->assertSame(5 * Bytes::GB, $usage->totalBytes);
         $this->assertSame('active', $usage->status);
         $this->assertSame(1_900_000_000, $usage->expiresAt?->getTimestamp()); // ms -> s
+    }
+
+    public function test_get_usage_treats_a_negative_on_hold_expiry_as_not_started(): void
+    {
+        Cache::flush();
+
+        Http::fake([
+            '*/login' => Http::response(['success' => true], 200, ['Set-Cookie' => 'session=abc123']),
+            '*/panel/api/clients/traffic/*' => Http::response([
+                'success' => true,
+                'obj' => [
+                    'up' => 0,
+                    'down' => 0,
+                    'total' => Bytes::GB,
+                    'expiryTime' => -2_592_000_000, // negative ms = on hold, clock not started
+                    'enable' => true,
+                ],
+            ]),
+        ]);
+
+        $usage = (new ThreeXuiDriver($this->makePanel()))->getUsage('held');
+
+        $this->assertNotNull($usage);
+        $this->assertNull($usage->expiresAt); // no absolute expiry until first connection
+        $this->assertSame('active', $usage->status);
     }
 
     public function test_get_usage_returns_null_when_client_missing(): void
