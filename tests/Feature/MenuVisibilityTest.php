@@ -61,6 +61,30 @@ class MenuVisibilityTest extends TestCase
         $this->assertContains(Keyboards::CB_GET_CONFIG, $cbs); // others still present
     }
 
+    public function test_joined_button_shares_the_previous_row(): void
+    {
+        // Default: tutorials sits on its own row.
+        $this->assertCount(1, $this->rowOf(Keyboards::mainMenu(), Keyboards::CB_TUTORIALS));
+
+        // Mark tutorials as joined → it shares the previous shown button's row.
+        Setting::put(Keyboards::MENU_JOINED_KEY, ['tutorials']);
+        $this->assertCount(2, $this->rowOf(Keyboards::mainMenu(), Keyboards::CB_TUTORIALS));
+    }
+
+    /** @return list<mixed> the keyboard row containing the given callback */
+    private function rowOf(InlineKeyboardMarkup $kb, string $callback): array
+    {
+        foreach ($kb->inline_keyboard as $row) {
+            foreach ($row as $btn) {
+                if ($btn->callback_data === $callback) {
+                    return $row;
+                }
+            }
+        }
+
+        return [];
+    }
+
     /** @return list<string> every callback_data in the keyboard */
     private function callbacks(InlineKeyboardMarkup $kb): array
     {

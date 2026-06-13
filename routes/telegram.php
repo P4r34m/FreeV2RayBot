@@ -145,6 +145,7 @@ $bot->group(function (Nutgram $bot) {
     $bot->onCallbackQueryData('admin:menubtns', \App\Telegram\Handlers\Admin\AdminMenuButtonsHandler::class)->middleware(EnsureAdmin::class);
     $bot->onCallbackQueryData('admin:menubtn:{slug}', \App\Telegram\Handlers\Admin\AdminMenuButtonToggleHandler::class)->middleware(EnsureAdmin::class);
     $bot->onCallbackQueryData('admin:menumove:{combo}', \App\Telegram\Handlers\Admin\AdminMenuButtonMoveHandler::class)->middleware(EnsureAdmin::class);
+    $bot->onCallbackQueryData('admin:menujoin:{slug}', \App\Telegram\Handlers\Admin\AdminMenuButtonJoinHandler::class)->middleware(EnsureAdmin::class);
     $bot->onCallbackQueryData('admin:setpath', AdminSetPathHandler::class)->middleware(EnsureAdmin::class);
     $bot->onCallbackQueryData('admin:txtset', \App\Telegram\Handlers\Admin\AdminTextSettingsHandler::class)->middleware(EnsureAdmin::class);
     $bot->onCallbackQueryData('admin:txtset:edit:{slug}', fn (Nutgram $bot, string $slug) => \App\Telegram\Handlers\Admin\AdminTextSettingsHandler::edit($bot, $slug))->middleware(EnsureAdmin::class);

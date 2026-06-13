@@ -73,6 +73,56 @@ class Keyboards
     /** Setting key holding the admin-defined main-menu button order (list of slugs). */
     public const MENU_ORDER_KEY = 'menu_order';
 
+    /** Setting key: slugs that sit on the SAME row as the preceding shown button. */
+    public const MENU_JOINED_KEY = 'menu_joined';
+
+    /** Max buttons per main-menu row. */
+    private const ROW_MAX = 3;
+
+    /** Whether a button shares the previous button's row. */
+    public static function buttonJoined(string $slug): bool
+    {
+        $joined = Setting::get(self::MENU_JOINED_KEY, []);
+
+        return is_array($joined) && in_array($slug, $joined, true);
+    }
+
+    /**
+     * Group the shown user buttons into rows, honoring the per-button "join with
+     * previous" flag (so the admin can place 2-3 buttons side by side).
+     *
+     * @param  callable(string,string,string):mixed  $make  builds one button
+     * @return array<int, list<mixed>>
+     */
+    private static function buildMenuRows(callable $make): array
+    {
+        $rows = [];
+        $current = [];
+
+        foreach (self::orderedUserButtons() as $slug => [$contentKey, $callback]) {
+            if (! self::userButtonShown($slug, $contentKey)) {
+                continue;
+            }
+
+            $btn = $make($slug, $contentKey, $callback);
+
+            if ($current !== [] && self::buttonJoined($slug) && count($current) < self::ROW_MAX) {
+                $current[] = $btn;
+            } else {
+                if ($current !== []) {
+                    $rows[] = $current;
+                }
+                $current = [$btn];
+            }
+        }
+
+        if ($current !== []) {
+            $rows[] = $current;
+        }
+
+        return $rows;
+    }
+
     /**
      * USER_BUTTONS reordered per the admin-defined order: stored slugs first (in
      * order), then any remaining defaults. Unknown stored slugs are ignored.
@@ -117,12 +167,11 @@ class Keyboards
      */
     public static function mainReplyKeyboard(bool $isAdmin = false): ReplyKeyboardMarkup
     {
-        $kb = ReplyKeyboardMarkup::make(resize_keyboard: true, is_persistent: true);
+        // No is_persistent → the user can collapse the keyboard.
+        $kb = ReplyKeyboardMarkup::make(resize_keyboard: true);
 
-        foreach (self::orderedUserButtons() as $slug => [$contentKey, $callback]) {
-            if (self::userButtonShown($slug, $contentKey)) {
-                $kb->addRow(KeyboardButton::make(Content::buttonLabel($contentKey)));
-            }
+        foreach (self::buildMenuRows(fn ($slug, $contentKey) => KeyboardButton::make(Content::buttonLabel($contentKey))) as $row) {
+            $kb->addRow(...$row);
         }
 
         if ($isAdmin) {
@@ -137,10 +186,8 @@ class Keyboards
     {
         $kb = InlineKeyboardMarkup::make();
 
-        foreach (self::orderedUserButtons() as $slug => [$contentKey, $callback]) {
-            if (self::userButtonShown($slug, $contentKey)) {
-                $kb->addRow(Content::button($contentKey, $callback));
-            }
+        foreach (self::buildMenuRows(fn ($slug, $contentKey, $callback) => Content::button($contentKey, $callback)) as $row) {
+            $kb->addRow(...$row);
         }
 
         if ($isAdmin) {

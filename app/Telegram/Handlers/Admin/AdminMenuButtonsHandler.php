@@ -18,13 +18,15 @@ class AdminMenuButtonsHandler
 
         $kb = InlineKeyboardMarkup::make();
 
-        // Each row: move up / move down / toggle visibility (in current order).
+        // Each row: move up / down / join-with-previous / toggle visibility.
         foreach (Keyboards::userButtonOrder() as $slug) {
             [$contentKey] = Keyboards::USER_BUTTONS[$slug];
             $state = Keyboards::buttonVisible($contentKey) ? '🟢' : '🔴';
+            $join = Keyboards::buttonJoined($slug) ? '🔗' : '▫️';
             $kb->addRow(
                 Btn::make('⬆️', callback_data: 'admin:menumove:up_'.$slug),
                 Btn::make('⬇️', callback_data: 'admin:menumove:down_'.$slug),
+                Btn::make($join, callback_data: 'admin:menujoin:'.$slug),
                 Btn::make($state.' '.Content::buttonLabel($contentKey), callback_data: 'admin:menubtn:'.$slug),
             );
         }
@@ -33,7 +35,8 @@ class AdminMenuButtonsHandler
 
         Reply::screen(
             $bot,
-            "👁 <b>دکمه‌های کاربر</b>\n⬆️⬇️ برای جابه‌جایی ترتیب — روی نام دکمه برای نمایش/پنهان‌کردن:",
+            "👁 <b>دکمه‌های کاربر</b>\n".
+            "⬆️⬇️ ترتیب — نام دکمه: نمایش/پنهان — 🔗 کنار دکمه‌ی قبلی (هم‌ردیف)، ▫️ سطر جدا.",
             $kb,
         );
     }
