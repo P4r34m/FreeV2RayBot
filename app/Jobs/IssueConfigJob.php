@@ -72,7 +72,7 @@ class IssueConfigJob implements ShouldQueue
                 chat_id: $this->chatId,
                 parse_mode: 'HTML',
                 disable_web_page_preview: true,
-                reply_markup: Keyboards::backMenu(),
+                reply_markup: Keyboards::afterIssue($config),
             );
 
             $this->report($reports, $user, $config);

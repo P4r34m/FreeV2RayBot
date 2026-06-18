@@ -387,6 +387,11 @@ final class PasarGuardDriver extends AbstractPanelDriver
         return new IssuedConfig(
             identifier: $username,
             subscriptionUrl: $this->absoluteSubscriptionUrl($data['subscription_url'] ?? null),
+            // PasarGuard returns the individual protocol links directly — keep them
+            // so single-config delivery needs no extra subscription fetch.
+            configLinks: is_array($data['links'] ?? null)
+                ? array_values(array_filter($data['links'], 'is_string'))
+                : [],
             expiresAt: $this->expiryToCarbon($data['expire'] ?? null),
             // Effective limit echoed back by the panel (0 = unlimited).
             dataLimitBytes: (int) ($data['data_limit'] ?? 0),

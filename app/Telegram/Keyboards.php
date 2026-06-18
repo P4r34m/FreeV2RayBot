@@ -241,6 +241,21 @@ class Keyboards
         return InlineKeyboardMarkup::make()->addRow(Content::button('common.back_menu', self::CB_MENU));
     }
 
+    /**
+     * Keyboard shown under a freshly issued/renewed config: a "get single configs"
+     * button (when there is a subscription) plus back-to-menu.
+     */
+    public static function afterIssue(\App\Models\Config $config): InlineKeyboardMarkup
+    {
+        $kb = InlineKeyboardMarkup::make();
+
+        if ($config->subscription_url) {
+            $kb->addRow(Content::button('config.single_configs', 'config:links:'.$config->id));
+        }
+
+        return $kb->addRow(Content::button('common.back_menu', self::CB_MENU));
+    }
+
     public static function single(string $contentKey, string $callbackData): InlineKeyboardMarkup
     {
         return InlineKeyboardMarkup::make()->addRow(Content::button($contentKey, $callbackData));

@@ -37,8 +37,13 @@ class ConfigViewHandler
             return;
         }
 
-        $kb = InlineKeyboardMarkup::make()
-            ->addRow(Content::button('config.rotate', 'config:rotate:'.$config->id))
+        $kb = InlineKeyboardMarkup::make();
+
+        if ($config->subscription_url) {
+            $kb->addRow(Content::button('config.single_configs', 'config:links:'.$config->id));
+        }
+
+        $kb->addRow(Content::button('config.rotate', 'config:rotate:'.$config->id))
             ->addRow(Btn::make('🔙 بازگشت به لیست', callback_data: Keyboards::CB_CONFIG_STATUS));
 
         Reply::screen($bot, Presenter::accountStatus($config), $kb);

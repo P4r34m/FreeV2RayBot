@@ -31,6 +31,8 @@ final class ContentDefaults
             'config.pick_server' => "🌐 <b>انتخاب سرور</b>\n\nکانفیگ شما از کدام سرور ساخته شود؟ یکی از سرورهای زیر را انتخاب کنید:",
             'config.list_header' => "🔑 <b>اشتراک‌های فعال شما</b>\n\nبرای دیدن جزئیات هر اشتراک، روی آن بزنید:",
             'config.rotated' => '🔄 لینک اشتراک شما با موفقیت عوض شد. لینک قبلی دیگر کار نمی‌کند.',
+            'config.single_header' => "📥 <b>کانفیگ‌های تکی</b>\nهر خط را جداگانه در برنامه‌ی خود وارد کنید:\n\n{links}",
+            'config.single_empty' => '⚠️ دریافت کانفیگ‌های تکی ممکن نشد. لطفاً از لینک اشتراک استفاده کنید یا کمی بعد دوباره تلاش کنید.',
             'config.rotate_failed' => '⚠️ تعویض لینک اشتراک انجام نشد. لطفاً کمی بعد دوباره تلاش کنید.',
 
             'account.status' => "📊 <b>وضعیت کانفیگ شما</b>\n\n🟢 وضعیت: <b>{status}</b>\n📥 مصرف‌شده: <b>{used}</b> از {limit}\n📦 باقیمانده: <b>{remaining}</b>\n⏳ انقضا: <b>{expiry}</b>\n\n🔗 <code>{url}</code>",
@@ -90,6 +92,7 @@ final class ContentDefaults
             'config.renew' => '♻️ تمدید کانفیگ فعلی',
             'config.status' => '🔑 اشتراک‌های من',
             'config.rotate' => '🔄 تعویض لینک اشتراک',
+            'config.single_configs' => '📥 دریافت کانفیگ‌ها به‌صورت تکی',
 
             'profile.history' => '🗂 تاریخچه',
 

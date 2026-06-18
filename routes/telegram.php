@@ -75,6 +75,7 @@ use App\Telegram\Middleware\AntiSpamMiddleware;
 use App\Telegram\Middleware\BotEnabledGuard;
 use App\Telegram\Middleware\EnsureAdmin;
 use App\Telegram\Middleware\MaintenanceGuard;
+use App\Telegram\Middleware\PrivateChatGuard;
 use App\Telegram\Middleware\ResolveBotUser;
 use App\Models\Setting;
 use App\Support\SettingKey;
@@ -124,6 +125,7 @@ $bot->group(function (Nutgram $bot) {
     $bot->onCallbackQueryData(Keyboards::CB_CONFIG_STATUS, ConfigStatusHandler::class);
     $bot->onCallbackQueryData('config:view:{id}', \App\Telegram\Handlers\ConfigViewHandler::class);
     $bot->onCallbackQueryData('config:rotate:{id}', \App\Telegram\Handlers\ConfigRotateHandler::class);
+    $bot->onCallbackQueryData('config:links:{id}', \App\Telegram\Handlers\ConfigLinksHandler::class);
     $bot->onCallbackQueryData(Keyboards::CB_TUTORIALS, TutorialsHandler::class);
     $bot->onCallbackQueryData('tutorial:show:{id}', TutorialShowHandler::class);
     $bot->onCallbackQueryData(Keyboards::CB_REFERRAL, ReferralHandler::class);
@@ -230,9 +232,11 @@ $bot->group(function (Nutgram $bot) {
 
     $bot->onCallbackQueryData(Keyboards::CB_ADMIN, AdminMenuHandler::class)->middleware(EnsureAdmin::class);
 })
-    // Nutgram group middleware executes in REGISTRATION order, so ResolveBotUser
-    // MUST be first to populate botUser before the guards read it (otherwise an
-    // admin can't re-enable the bot while it's off — botUser would be null here).
+    // Nutgram group middleware executes in REGISTRATION order. PrivateChatGuard
+    // runs first to drop channel/group updates outright; then ResolveBotUser
+    // populates botUser before the guards read it (otherwise an admin couldn't
+    // re-enable the bot while it's off — botUser would be null here).
+    ->middleware(PrivateChatGuard::class)
     ->middleware(ResolveBotUser::class)
     ->middleware(BotEnabledGuard::class)
     ->middleware(MaintenanceGuard::class)
