@@ -4,8 +4,10 @@ namespace App\Telegram\Handlers;
 
 use App\Models\BotUser;
 use App\Models\CoinPlan;
+use App\Models\Setting;
 use App\Services\CoinStoreService;
 use App\Services\Exceptions\InsufficientCoinsException;
+use App\Support\SettingKey;
 use App\Telegram\Content;
 use App\Telegram\Keyboards;
 use App\Telegram\Presenter;
@@ -29,6 +31,13 @@ class CoinExtendHandler
 
         if (! $plan || ! $config) {
             Reply::toast($bot, 'درخواست نامعتبر', alert: true);
+
+            return;
+        }
+
+        // Respect the admin switch even against a stale/crafted callback.
+        if (! Setting::bool(SettingKey::COIN_EXTEND_ENABLED, true)) {
+            Reply::toast($bot, 'افزودن به اشتراک موجود غیرفعال است.', alert: true);
 
             return;
         }

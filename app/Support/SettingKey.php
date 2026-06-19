@@ -24,6 +24,10 @@ final class SettingKey
     // Coins granted per verified invite when REFERRAL_MODE is 'coin'.
     public const REFERRAL_COINS_PER_INVITE = 'referral_coins_per_invite';
 
+    // Whether users may apply a coin package to an EXISTING config (volume top-up).
+    // When off, the coin store only issues brand-new configs.
+    public const COIN_EXTEND_ENABLED = 'coin_extend_enabled';
+
     public const DEFAULT_PLAN_ID = 'default_plan_id';
 
     public const SUPPORT_USERNAME = 'support_username';
@@ -72,6 +76,7 @@ final class SettingKey
             self::REFERRAL_QUALIFY_EVENT => 'first_config',
             self::REFERRAL_MODE => 'reward',
             self::REFERRAL_COINS_PER_INVITE => 1,
+            self::COIN_EXTEND_ENABLED => true,
             self::DEFAULT_PLAN_ID => null,
             self::SUPPORT_USERNAME => '',
             self::WELCOME_MESSAGE => "به ربات کانفیگ رایگان خوش آمدید 🌐\nبرای دریافت کانفیگ از دکمه‌های زیر استفاده کنید.",

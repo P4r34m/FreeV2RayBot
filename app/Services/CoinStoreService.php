@@ -52,7 +52,9 @@ class CoinStoreService
         $this->reserve($user, $plan);
 
         try {
-            return $this->issuer->extendConfig($config, $plan->data_limit_bytes, $plan->duration_days);
+            // Topping up an existing config adds VOLUME only — the subscription time
+            // (expiry) is never extended, so pass 0 days regardless of the plan.
+            return $this->issuer->extendConfig($config, $plan->data_limit_bytes, 0);
         } catch (\Throwable $e) {
             $this->refund($user, $plan);
             throw $e;

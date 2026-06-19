@@ -5,7 +5,9 @@ namespace App\Telegram\Handlers;
 use App\Enums\ConfigStatus;
 use App\Models\BotUser;
 use App\Models\CoinPlan;
+use App\Models\Setting;
 use App\Support\Bytes;
+use App\Support\SettingKey;
 use App\Telegram\Content;
 use App\Telegram\Keyboards;
 use App\Telegram\Reply;
@@ -35,9 +37,11 @@ class CoinPlanHandler
             ->where('source', \App\Models\Config::SOURCE_COIN)
             ->exists();
 
-        // A first-time coin buyer has nothing to extend, so don't ask how to apply
-        // the package — just issue a new config straight away.
-        if (! $hasCoinConfigs) {
+        $extendEnabled = Setting::bool(SettingKey::COIN_EXTEND_ENABLED, true);
+
+        // Nothing to extend (first-time buyer) or the admin disabled top-ups → don't
+        // ask how to apply the package, just issue a new config straight away.
+        if (! $hasCoinConfigs || ! $extendEnabled) {
             (new CoinBuyNewHandler)($bot, (string) $plan->id);
 
             return;

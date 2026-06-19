@@ -5,6 +5,8 @@ namespace App\Telegram\Handlers;
 use App\Enums\ConfigStatus;
 use App\Models\BotUser;
 use App\Models\CoinPlan;
+use App\Models\Setting;
+use App\Support\SettingKey;
 use App\Telegram\Content;
 use App\Telegram\Keyboards;
 use App\Telegram\Reply;
@@ -25,6 +27,13 @@ class CoinExtendListHandler
 
         if (! $plan) {
             Reply::screen($bot, '⚠️ بسته یافت نشد.', Keyboards::single('common.back', 'coin:store'));
+
+            return;
+        }
+
+        // Admin can switch off top-ups; guard here too so a stale button can't proceed.
+        if (! Setting::bool(SettingKey::COIN_EXTEND_ENABLED, true)) {
+            Reply::screen($bot, '⚠️ افزودن بسته به اشتراک موجود غیرفعال شده است.', Keyboards::single('common.back', 'coin:store'));
 
             return;
         }

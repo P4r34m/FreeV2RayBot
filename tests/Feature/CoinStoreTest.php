@@ -174,6 +174,52 @@ class CoinStoreTest extends TestCase
         $this->assertSame(100, BotUser::where('telegram_id', 8101)->value('coins'));
     }
 
+    public function test_buy_extend_adds_volume_but_not_time(): void
+    {
+        $panel = $this->fakePanel();
+        $user = BotUser::create(['telegram_id' => 8200, 'coins' => 100]);
+        $config = $user->configs()->create([
+            'panel_id' => $panel->id, 'source' => Config::SOURCE_COIN, 'remote_identifier' => 'fv_t',
+            'data_limit_bytes' => Bytes::fromGb(10), 'used_bytes' => 0,
+            'status' => ConfigStatus::Active, 'expires_at' => now()->addDays(5),
+        ]);
+        $before = $config->fresh()->expires_at->toDateTimeString();
+        // A plan WITH a duration — its days must be ignored on a top-up.
+        $plan = CoinPlan::create([
+            'name' => '+20G/10d', 'data_limit_bytes' => Bytes::fromGb(20), 'duration_days' => 10,
+            'coin_price' => 50, 'is_active' => true,
+        ]);
+
+        app(CoinStoreService::class)->buyExtend($user, $plan, $config);
+
+        $fresh = $config->fresh();
+        $this->assertSame(Bytes::fromGb(30), $fresh->data_limit_bytes);             // volume added
+        $this->assertSame($before, $fresh->expires_at->toDateTimeString());         // time untouched
+    }
+
+    public function test_disabling_top_ups_makes_a_plan_tap_issue_a_new_config(): void
+    {
+        Setting::put(SettingKey::REFERRAL_MODE, 'coin');
+        Setting::put(SettingKey::COIN_EXTEND_ENABLED, false);
+        $panel = $this->fakePanel();
+        $user = BotUser::create(['telegram_id' => 8201, 'coins' => 100]);
+        $user->configs()->create([
+            'panel_id' => $panel->id, 'source' => Config::SOURCE_COIN, 'remote_identifier' => 'fv_x',
+            'data_limit_bytes' => Bytes::fromGb(10), 'status' => ConfigStatus::Active, 'expires_at' => now()->addDays(5),
+        ]);
+        $plan = CoinPlan::create([
+            'name' => 'x', 'data_limit_bytes' => Bytes::fromGb(5), 'duration_days' => 5,
+            'coin_price' => 50, 'is_active' => true,
+        ]);
+
+        $bot = $this->userBot(8201);
+        $bot->hearCallbackQueryData('coin:plan:'.$plan->id)->reply();
+
+        // Top-ups disabled → tapping the package issues a brand-new config, not an extend.
+        $this->assertSame(2, Config::where('source', Config::SOURCE_COIN)->count());
+        $this->assertSame(50, BotUser::where('telegram_id', 8201)->value('coins'));
+    }
+
     private function userBot(int $id): Nutgram
     {
         Setting::put(SettingKey::ANTISPAM_ENABLED, false);

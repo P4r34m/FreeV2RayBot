@@ -19,6 +19,7 @@ class AdminToggleHandler
         SettingKey::REPORTS_ENABLED,
         SettingKey::MAINTENANCE_MODE,
         SettingKey::WEB_PANEL_ENABLED,
+        SettingKey::COIN_EXTEND_ENABLED,
     ];
 
     public function __invoke(Nutgram $bot, string $key): void
