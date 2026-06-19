@@ -162,6 +162,9 @@ $bot->group(function (Nutgram $bot) {
     $bot->onCallbackQueryData('admin:block', AdminBlockHandler::class)->middleware(EnsureAdmin::class);
     $bot->onCallbackQueryData('admin:unblock', AdminUnblockHandler::class)->middleware(EnsureAdmin::class);
     $bot->onCallbackQueryData('admin:addcoins', fn (Nutgram $bot) => \App\Telegram\Handlers\Admin\AdminUsersHandler::startGrantCoins($bot))->middleware(EnsureAdmin::class);
+    $bot->onCallbackQueryData('admin:admins', \App\Telegram\Handlers\Admin\AdminAdminsHandler::class)->middleware(EnsureAdmin::class);
+    $bot->onCallbackQueryData('admin:addadmin', fn (Nutgram $bot) => \App\Telegram\Handlers\Admin\AdminAdminsHandler::startAdd($bot))->middleware(EnsureAdmin::class);
+    $bot->onCallbackQueryData('admin:deladmin:{id}', fn (Nutgram $bot, string $id) => \App\Telegram\Handlers\Admin\AdminAdminsHandler::remove($bot, $id))->middleware(EnsureAdmin::class);
     $bot->onCallbackQueryData('admin:refmode', \App\Telegram\Handlers\Admin\AdminReferralModeHandler::class)->middleware(EnsureAdmin::class);
     $bot->onCallbackQueryData('admin:setcoins', function (Nutgram $bot) {
         \App\Telegram\Reply::toast($bot);

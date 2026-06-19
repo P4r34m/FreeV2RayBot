@@ -22,6 +22,7 @@ class AdminUsersHandler
                 Btn::make('✅ رفع مسدودی', callback_data: 'admin:unblock'),
             )
             ->addRow(Btn::make('🪙 افزایش/کسر سکه کاربر', callback_data: 'admin:addcoins'))
+            ->addRow(Btn::make('👮 مدیریت ادمین‌ها', callback_data: 'admin:admins'))
             ->addRow(Btn::make('🔙 بازگشت', callback_data: 'admin'));
 
         Reply::screen($bot, "⛔️ <b>مدیریت کاربران</b>\nمسدودسازی/رفع مسدودی یا تعیین سقف کانفیگ بر اساس آیدی عددی:", $kb);
