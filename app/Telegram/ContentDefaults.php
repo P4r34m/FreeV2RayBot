@@ -87,6 +87,9 @@ final class ContentDefaults
             'menu.coin_store' => '🪙 دریافت کانفیگ با سکه',
             'menu.my_configs' => '🔑 اشتراک‌های من',
             'menu.admin' => '⚙️ پنل مدیریت',
+            // Icon + color holder for the dynamic server-pick buttons (its label is
+            // unused — the button text is the panel name + remaining count).
+            'menu.server' => 'سرور',
 
             'config.new' => '🆕 دریافت کانفیگ جدید',
             'config.renew' => '♻️ تمدید کانفیگ فعلی',

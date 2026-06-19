@@ -73,7 +73,14 @@ class IssueNewHandler
         foreach ($panels as $panel) {
             $remaining = $panel->remainingConfigs();
             $suffix = $remaining === null ? 'نامحدود' : $remaining.' باقی‌مانده';
-            $kb->addRow(Btn::make("🖥 {$panel->name} ({$suffix})", callback_data: 'config:new:'.$panel->id));
+            // No hardcoded icon; the admin can set a premium-emoji icon + color for
+            // these via the "menu.server" button in the content editor.
+            $kb->addRow(Btn::make(
+                text: $panel->name.' ('.$suffix.')',
+                callback_data: 'config:new:'.$panel->id,
+                icon_custom_emoji_id: Content::iconEmojiId('menu.server'),
+                style: Content::buttonStyle('menu.server'),
+            ));
         }
         $kb->addRow(Keyboards::backButton(Keyboards::CB_GET_CONFIG));
 

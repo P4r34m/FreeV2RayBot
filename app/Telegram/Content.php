@@ -36,7 +36,13 @@ class Content
         return static::buttons()[$key]['icon'] ?? null;
     }
 
-    /** Build an inline button from a content key (+ optional premium-emoji icon). */
+    /** Button color/style for a key: primary|success|danger, or null (default). */
+    public static function buttonStyle(string $key): ?string
+    {
+        return static::buttons()[$key]['style'] ?? null;
+    }
+
+    /** Build an inline button from a content key (+ optional premium-emoji icon & color). */
     public static function button(string $key, ?string $callbackData = null, ?string $url = null): Btn
     {
         return Btn::make(
@@ -44,6 +50,7 @@ class Content
             url: $url,
             callback_data: $callbackData,
             icon_custom_emoji_id: static::iconEmojiId($key),
+            style: static::buttonStyle($key),
         );
     }
 
@@ -53,13 +60,14 @@ class Content
         return Cache::remember('bot_texts.all', 3600, fn () => BotText::pluck('content', 'key')->all());
     }
 
-    /** @return array<string, array{label: string, icon: ?string}> */
+    /** @return array<string, array{label: string, icon: ?string, style: ?string}> */
     protected static function buttons(): array
     {
         return Cache::remember('bot_buttons.all', 3600, function () {
             return BotButton::all()->keyBy('key')->map(fn (BotButton $b) => [
                 'label' => $b->label,
                 'icon' => $b->icon_custom_emoji_id,
+                'style' => $b->style,
             ])->all();
         });
     }
