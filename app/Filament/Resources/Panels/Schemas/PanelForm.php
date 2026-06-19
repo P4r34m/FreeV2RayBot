@@ -29,9 +29,12 @@ class PanelForm
                 Toggle::make('is_active')->label('فعال')->default(true),
                 TextInput::make('priority')->label('اولویت انتخاب')->numeric()->default(0)
                     ->helperText('بالاتر = ترجیح بیشتر هنگام ساخت کانفیگ'),
-                TextInput::make('capacity')->label('ظرفیت (حداکثر کانفیگ)')->numeric()->minValue(-1)
+                TextInput::make('capacity')->label('ظرفیت کانفیگ رایگان')->numeric()->minValue(-1)
                     ->helperText('خالی یا -1 = نامحدود')
                     // Column is unsigned → store "unlimited" (negative input) as null.
+                    ->dehydrateStateUsing(fn ($state) => ($state === null || $state === '' || (int) $state < 0) ? null : (int) $state),
+                TextInput::make('coin_capacity')->label('ظرفیت کانفیگ سکه‌ای')->numeric()->minValue(-1)
+                    ->helperText('جدا از ظرفیت رایگان — خالی یا -1 = نامحدود')
                     ->dehydrateStateUsing(fn ($state) => ($state === null || $state === '' || (int) $state < 0) ? null : (int) $state),
             ]),
 

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\ConfigStatus;
 use App\Enums\PanelType;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -29,6 +30,7 @@ class Panel extends Model
             'is_active' => 'boolean',
             'priority' => 'integer',
             'capacity' => 'integer',
+            'coin_capacity' => 'integer',
             'active_config_count' => 'integer',
             'last_health_check_at' => 'datetime',
         ];
@@ -49,27 +51,50 @@ class Panel extends Model
         return $this->health_status === 'ok';
     }
 
-    public function hasCapacity(): bool
+    /**
+     * The configured cap for a given config source. Free configs are limited by
+     * `capacity`, coin-purchased ones by the SEPARATE `coin_capacity` (null/-1 =
+     * unlimited for each, independently).
+     */
+    public function capacityFor(string $source): ?int
     {
-        return $this->isUnlimited() || $this->active_config_count < $this->capacity;
+        return $source === Config::SOURCE_COIN ? $this->coin_capacity : $this->capacity;
     }
 
-    /** Unlimited config capacity (no cap set, or capacity = -1). */
-    public function isUnlimited(): bool
+    /** Active configs of a given source currently live on this panel (live count). */
+    public function activeCountFor(string $source): int
     {
-        return $this->capacity === null || $this->capacity < 0;
+        return $this->configs()
+            ->where('status', ConfigStatus::Active->value)
+            ->where('source', $source)
+            ->count();
     }
 
-    /** Remaining config slots, or null when capacity is unlimited. */
-    public function remainingConfigs(): ?int
+    /** Unlimited capacity for this source (no cap set, or cap = -1). */
+    public function isUnlimited(string $source = Config::SOURCE_FREE): bool
     {
-        return $this->isUnlimited() ? null : max(0, $this->capacity - $this->active_config_count);
+        $cap = $this->capacityFor($source);
+
+        return $cap === null || $cap < 0;
     }
 
-    /** "نامحدود" or the remaining count as a string. */
-    public function remainingHuman(): string
+    public function hasCapacity(string $source = Config::SOURCE_FREE): bool
     {
-        $remaining = $this->remainingConfigs();
+        return $this->isUnlimited($source) || $this->activeCountFor($source) < $this->capacityFor($source);
+    }
+
+    /** Remaining slots for this source, or null when unlimited. */
+    public function remainingConfigs(string $source = Config::SOURCE_FREE): ?int
+    {
+        return $this->isUnlimited($source)
+            ? null
+            : max(0, $this->capacityFor($source) - $this->activeCountFor($source));
+    }
+
+    /** "نامحدود" or the remaining count for this source as a string. */
+    public function remainingHuman(string $source = Config::SOURCE_FREE): string
+    {
+        $remaining = $this->remainingConfigs($source);
 
         return $remaining === null ? 'نامحدود' : (string) $remaining;
     }

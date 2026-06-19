@@ -11,7 +11,7 @@ use SergiX44\Nutgram\Nutgram;
 /** Edit a single field of an existing panel (name / base_url / username / password / api_token). */
 class EditPanelFieldConversation extends Conversation
 {
-    private const FIELDS = ['name', 'base_url', 'username', 'password', 'api_token', 'capacity'];
+    private const FIELDS = ['name', 'base_url', 'username', 'password', 'api_token', 'capacity', 'coin_capacity'];
 
     private const LABELS = [
         'name' => 'نام',
@@ -19,7 +19,8 @@ class EditPanelFieldConversation extends Conversation
         'username' => 'یوزرنیم',
         'password' => 'پسورد',
         'api_token' => 'توکن API',
-        'capacity' => 'ظرفیت (تعداد کانفیگ مجاز، -1 = نامحدود)',
+        'capacity' => 'ظرفیت کانفیگ رایگان (-1 = نامحدود)',
+        'coin_capacity' => 'ظرفیت کانفیگ سکه‌ای (-1 = نامحدود)',
     ];
 
     public ?int $panelId = null;
@@ -72,7 +73,7 @@ class EditPanelFieldConversation extends Conversation
             return;
         }
 
-        if ($this->field === 'capacity' && ! preg_match('/^-?\d+$/', $text)) {
+        if (in_array($this->field, ['capacity', 'coin_capacity'], true) && ! preg_match('/^-?\d+$/', $text)) {
             $bot->sendMessage('عدد نامعتبر است. یک عدد صحیح بفرستید (-1 یعنی نامحدود) یا /cancel.');
             $this->next('capture');
 
@@ -119,9 +120,9 @@ class EditPanelFieldConversation extends Conversation
 
         $value = match ($this->field) {
             'base_url' => rtrim($text, '/'),
-            // The column is unsigned; store "unlimited" as null (a negative input
+            // The columns are unsigned; store "unlimited" as null (a negative input
             // such as -1 means unlimited).
-            'capacity' => (int) $text < 0 ? null : (int) $text,
+            'capacity', 'coin_capacity' => (int) $text < 0 ? null : (int) $text,
             default => $text,
         };
         $panel->update([$this->field => $value]);

@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\Config;
 use App\Models\Panel;
 use App\Models\Plan;
 
@@ -12,24 +13,24 @@ use App\Models\Plan;
  */
 class PanelSelector
 {
-    public function select(?Plan $plan = null): ?Panel
+    public function select(?Plan $plan = null, string $source = Config::SOURCE_FREE): ?Panel
     {
         if ($plan && $plan->panel_id) {
             $panel = $plan->panel;
 
-            return $panel && $this->isUsable($panel) ? $panel : null;
+            return $panel && $this->isUsable($panel, $source) ? $panel : null;
         }
 
-        return $this->available()->first();
+        return $this->available($source)->first();
     }
 
     /**
-     * All currently usable panels (active, healthy, with capacity), best first.
-     * Used by the user-facing server picker.
+     * All currently usable panels (active, healthy, with capacity for the given
+     * config source), best first. Free and coin capacity are tracked separately.
      *
      * @return \Illuminate\Support\Collection<int, Panel>
      */
-    public function available(): \Illuminate\Support\Collection
+    public function available(string $source = Config::SOURCE_FREE): \Illuminate\Support\Collection
     {
         return Panel::query()
             ->where('is_active', true)
@@ -37,14 +38,14 @@ class PanelSelector
             ->orderByDesc('priority')
             ->orderBy('active_config_count')
             ->get()
-            ->filter(fn (Panel $panel) => $panel->hasCapacity())
+            ->filter(fn (Panel $panel) => $panel->hasCapacity($source))
             ->values();
     }
 
-    protected function isUsable(Panel $panel): bool
+    protected function isUsable(Panel $panel, string $source = Config::SOURCE_FREE): bool
     {
         return $panel->is_active
-            && $panel->hasCapacity()
+            && $panel->hasCapacity($source)
             && ($panel->health_status === null || $panel->health_status === 'ok');
     }
 }

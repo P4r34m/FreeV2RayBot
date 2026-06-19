@@ -2,6 +2,7 @@
 
 namespace App\Telegram\Handlers\Admin;
 
+use App\Models\Config;
 use App\Models\Panel;
 use App\Telegram\Reply;
 use SergiX44\Nutgram\Nutgram;
@@ -39,18 +40,27 @@ class AdminPanelEditHandler
         // API token is available for every panel type — for 3x-ui it bypasses the
         // CSRF protection on POST /login (recommended for v3.x panels).
         $kb->addRow(Btn::make('🔑 توکن API', callback_data: "admin:panels:editfield:{$panel->id}_api_token"));
-        $kb->addRow(Btn::make('📊 ظرفیت کانفیگ', callback_data: "admin:panels:editfield:{$panel->id}_capacity"));
+        $kb->addRow(
+            Btn::make('📊 ظرفیت رایگان', callback_data: "admin:panels:editfield:{$panel->id}_capacity"),
+            Btn::make('🪙 ظرفیت سکه‌ای', callback_data: "admin:panels:editfield:{$panel->id}_coin_capacity"),
+        );
 
         $kb->addRow(Btn::make('🔙 بازگشت', callback_data: "admin:panels:view:{$panel->id}"));
 
-        $capacity = $panel->isUnlimited() ? 'نامحدود' : $panel->capacity.' (باقی‌مانده: '.$panel->remainingHuman().')';
+        $free = $panel->isUnlimited(Config::SOURCE_FREE)
+            ? 'نامحدود'
+            : $panel->capacity.' (باقی‌مانده: '.$panel->remainingHuman(Config::SOURCE_FREE).')';
+        $coin = $panel->isUnlimited(Config::SOURCE_COIN)
+            ? 'نامحدود'
+            : $panel->coin_capacity.' (باقی‌مانده: '.$panel->remainingHuman(Config::SOURCE_COIN).')';
 
         Reply::screen(
             $bot,
             '✏️ <b>ویرایش پنل — '.e($panel->name)."</b>\n".
             'نوع: '.$panel->type->label()."\n".
             'آدرس فعلی: <code>'.htmlspecialchars($panel->base_url, ENT_QUOTES)."</code>\n".
-            "ظرفیت: {$capacity}\n\n".
+            "ظرفیت رایگان: {$free}\n".
+            "ظرفیت سکه‌ای: {$coin}\n\n".
             'کدام مورد را ویرایش می‌کنید؟ (یوزر/پس و توکن نمایش داده نمی‌شوند؛ مقدار جدید جایگزین می‌شود.)',
             $kb,
         );

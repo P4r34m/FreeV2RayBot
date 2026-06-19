@@ -40,7 +40,8 @@ class CoinBuyNewHandler
             return;
         }
 
-        $panel = app(PanelSelector::class)->select();
+        // Coin configs are capped by the panel's SEPARATE coin capacity.
+        $panel = app(PanelSelector::class)->select(null, \App\Models\Config::SOURCE_COIN);
         if (! $panel) {
             Reply::screen($bot, '⚠️ در حال حاضر سروری در دسترس نیست.', Keyboards::single('common.back', 'coin:store'));
 
