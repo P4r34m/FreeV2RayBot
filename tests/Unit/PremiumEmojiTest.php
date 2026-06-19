@@ -60,4 +60,45 @@ class PremiumEmojiTest extends TestCase
         $this->assertSame('', $text);
         $this->assertNull($icon);
     }
+
+    public function test_to_html_wraps_premium_emoji_in_place(): void
+    {
+        // "سلام " is 5 UTF-16 units; "🔥" sits at offset 5 with length 2.
+        $message = $this->message('سلام 🔥 خوبی', [
+            MessageEntity::make(MessageEntityType::CUSTOM_EMOJI, 5, 2, custom_emoji_id: '999'),
+        ]);
+
+        $this->assertSame(
+            'سلام <tg-emoji emoji-id="999">🔥</tg-emoji> خوبی',
+            PremiumEmoji::toHtml($message),
+        );
+    }
+
+    public function test_to_html_keeps_plain_text_and_literal_html_verbatim(): void
+    {
+        $this->assertSame('<b>سلام</b>', PremiumEmoji::toHtml($this->message('<b>سلام</b>')));
+    }
+
+    public function test_to_html_handles_multiple_premium_emoji(): void
+    {
+        // "🔥a😀": 🔥 offset0 len2, "a" offset2 len1, 😀 offset3 len2.
+        $message = $this->message('🔥a😀', [
+            MessageEntity::make(MessageEntityType::CUSTOM_EMOJI, 0, 2, custom_emoji_id: '1'),
+            MessageEntity::make(MessageEntityType::CUSTOM_EMOJI, 3, 2, custom_emoji_id: '2'),
+        ]);
+
+        $this->assertSame(
+            '<tg-emoji emoji-id="1">🔥</tg-emoji>a<tg-emoji emoji-id="2">😀</tg-emoji>',
+            PremiumEmoji::toHtml($message),
+        );
+    }
+
+    public function test_to_html_ignores_non_digit_emoji_id(): void
+    {
+        $message = $this->message('🔥', [
+            MessageEntity::make(MessageEntityType::CUSTOM_EMOJI, 0, 2, custom_emoji_id: 'abc'),
+        ]);
+
+        $this->assertSame('🔥', PremiumEmoji::toHtml($message));
+    }
 }

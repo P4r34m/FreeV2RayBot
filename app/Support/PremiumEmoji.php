@@ -33,4 +33,57 @@ class PremiumEmoji
 
         return [$text, null];
     }
+
+    /**
+     * Turn a message into HTML for storage, converting every premium (custom)
+     * emoji into a <tg-emoji emoji-id="..."> tag at its exact position while
+     * leaving the rest of the text verbatim (so admin-typed HTML is preserved).
+     * Telegram entity offsets/lengths are UTF-16 code units.
+     */
+    public static function toHtml(?Message $message): string
+    {
+        $text = (string) ($message?->text ?? '');
+
+        if ($text === '') {
+            return '';
+        }
+
+        $emojis = [];
+        foreach ($message?->entities ?? [] as $entity) {
+            $type = $entity->type instanceof MessageEntityType ? $entity->type->value : $entity->type;
+            if ($type === 'custom_emoji' && $entity->custom_emoji_id !== null && ctype_digit((string) $entity->custom_emoji_id)) {
+                $emojis[] = $entity;
+            }
+        }
+
+        if ($emojis === []) {
+            return $text; // nothing premium → store the text exactly as typed
+        }
+
+        usort($emojis, fn ($a, $b) => $a->offset <=> $b->offset);
+
+        $u16 = mb_convert_encoding($text, 'UTF-16BE', 'UTF-8');
+        $out = '';
+        $cursor = 0; // position in UTF-16 code units
+
+        foreach ($emojis as $e) {
+            if ($e->offset < $cursor) {
+                continue; // overlapping/duplicate entity — skip defensively
+            }
+
+            $before = substr($u16, $cursor * 2, ($e->offset - $cursor) * 2);
+            $fallback = substr($u16, $e->offset * 2, $e->length * 2);
+
+            $out .= mb_convert_encoding($before, 'UTF-8', 'UTF-16BE')
+                .'<tg-emoji emoji-id="'.$e->custom_emoji_id.'">'
+                .mb_convert_encoding($fallback, 'UTF-8', 'UTF-16BE')
+                .'</tg-emoji>';
+
+            $cursor = $e->offset + $e->length;
+        }
+
+        $out .= mb_convert_encoding(substr($u16, $cursor * 2), 'UTF-8', 'UTF-16BE');
+
+        return $out;
+    }
 }

@@ -3,6 +3,7 @@
 namespace App\Telegram\Conversations;
 
 use App\Models\BotText;
+use App\Support\PremiumEmoji;
 use App\Telegram\ContentDefaults;
 use SergiX44\Nutgram\Conversations\Conversation;
 use SergiX44\Nutgram\Nutgram;
@@ -49,7 +50,9 @@ class EditTextConversation extends Conversation
         );
 
         $bot->sendMessage(
-            "متن جدید را بفرستید. (HTML مجاز است؛ برای ایموجی پریمیوم از تگ tg-emoji استفاده کنید.)\n\nبرای لغو: /cancel",
+            "متن جدید را بفرستید. (HTML مجاز است.)\n".
+            "💡 برای ایموجی پریمیوم کافی است همان ایموجی را داخل متن بفرستی؛ خودم تگش را می‌سازم — نیازی به نوشتن دستیِ tg-emoji نیست.\n\n".
+            'برای لغو: /cancel',
             parse_mode: 'HTML',
         );
 
@@ -84,21 +87,25 @@ class EditTextConversation extends Conversation
     public function captureValue(Nutgram $bot): void
     {
         $message = $bot->message();
-        $new = $message?->text ?? '';
+        $raw = $message?->text ?? '';
 
-        if (trim($new) === '/cancel') {
+        if (trim($raw) === '/cancel') {
             $bot->sendMessage('لغو شد.');
             $this->end();
 
             return;
         }
 
-        if (trim($new) === '') {
+        if (trim($raw) === '') {
             $bot->sendMessage('متن خالی است. یک متن معتبر بفرستید یا /cancel.');
             $this->next('captureValue');
 
             return;
         }
+
+        // Auto-convert any premium emoji in the message into <tg-emoji> tags so the
+        // admin never has to type emoji ids by hand. Plain text is kept verbatim.
+        $new = PremiumEmoji::toHtml($message);
 
         BotText::updateOrCreate(['key' => $this->key], ['content' => $new]);
 
