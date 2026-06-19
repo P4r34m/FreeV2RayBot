@@ -100,6 +100,7 @@ final class ContentDefaults
             'config.status' => '🔑 اشتراک‌های من',
             'config.rotate' => '🔄 تعویض لینک اشتراک',
             'config.single_configs' => '📥 دریافت کانفیگ‌ها به‌صورت تکی',
+            'config.view_sub_site' => '🌐 مشاهده لینک اشتراک در سایت',
 
             'profile.history' => '🗂 تاریخچه',
 

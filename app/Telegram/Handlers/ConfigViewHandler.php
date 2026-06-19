@@ -40,6 +40,7 @@ class ConfigViewHandler
         $kb = InlineKeyboardMarkup::make();
 
         if ($config->subscription_url) {
+            $kb->addRow(Content::button('config.view_sub_site', url: $config->subscription_url));
             $kb->addRow(Content::button('config.single_configs', 'config:links:'.$config->id));
         }
 

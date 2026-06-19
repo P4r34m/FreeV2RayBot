@@ -66,7 +66,7 @@ class CoinExtendHandler
             Reply::screen(
                 $bot,
                 Content::text('coin.extended')."\n\n".Presenter::accountStatus($config),
-                Keyboards::backMenu(),
+                Keyboards::afterIssue($config),
             );
         } catch (InsufficientCoinsException) {
             Reply::screen(

@@ -51,7 +51,7 @@ class CoinBuyNewHandler
 
         try {
             $config = app(CoinStoreService::class)->buyNew($user, $plan, $panel);
-            Reply::screen($bot, Presenter::configCaption($config), Keyboards::backMenu());
+            Reply::screen($bot, Presenter::configCaption($config), Keyboards::afterIssue($config));
         } catch (InsufficientCoinsException) {
             Reply::screen(
                 $bot,

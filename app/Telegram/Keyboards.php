@@ -242,14 +242,16 @@ class Keyboards
     }
 
     /**
-     * Keyboard shown under a freshly issued/renewed config: a "get single configs"
-     * button (when there is a subscription) plus back-to-menu.
+     * Keyboard shown under a freshly issued/renewed config: a link to open the
+     * subscription in the browser, a "get single configs" button (both only when
+     * there is a subscription) plus back-to-menu.
      */
     public static function afterIssue(\App\Models\Config $config): InlineKeyboardMarkup
     {
         $kb = InlineKeyboardMarkup::make();
 
         if ($config->subscription_url) {
+            $kb->addRow(Content::button('config.view_sub_site', url: $config->subscription_url));
             $kb->addRow(Content::button('config.single_configs', 'config:links:'.$config->id));
         }
 
