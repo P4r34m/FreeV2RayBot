@@ -10,7 +10,6 @@ use App\Telegram\Content;
 use App\Telegram\Keyboards;
 use App\Telegram\Reply;
 use SergiX44\Nutgram\Nutgram;
-use SergiX44\Nutgram\Telegram\Types\Keyboard\InlineKeyboardButton as Btn;
 use SergiX44\Nutgram\Telegram\Types\Keyboard\InlineKeyboardMarkup;
 
 /** Coin package detail + buy options (callback: coin:plan:{id}). */
@@ -45,8 +44,8 @@ class CoinPlanHandler
         }
 
         $kb = InlineKeyboardMarkup::make()
-            ->addRow(Btn::make('🆕 کانفیگ جدید', callback_data: 'coin:buynew:'.$plan->id))
-            ->addRow(Btn::make('➕ افزودن به اشتراک موجود', callback_data: 'coin:buyext:'.$plan->id))
+            ->addRow(Content::button('coin.buy_new', 'coin:buynew:'.$plan->id))
+            ->addRow(Content::button('coin.buy_extend', 'coin:buyext:'.$plan->id))
             ->addRow(Keyboards::backButton('coin:store'));
 
         Reply::screen($bot, Content::text('coin.plan_body', [

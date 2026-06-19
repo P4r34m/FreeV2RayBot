@@ -93,6 +93,10 @@ final class ContentDefaults
 
             'config.new' => '🆕 دریافت کانفیگ جدید',
             'config.renew' => '♻️ تمدید کانفیگ فعلی',
+
+            'coin.buy_new' => '🆕 کانفیگ جدید',
+            'coin.buy_extend' => '➕ افزودن به اشتراک موجود',
+
             'config.status' => '🔑 اشتراک‌های من',
             'config.rotate' => '🔄 تعویض لینک اشتراک',
             'config.single_configs' => '📥 دریافت کانفیگ‌ها به‌صورت تکی',
