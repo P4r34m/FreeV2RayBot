@@ -192,6 +192,11 @@ class CoinStoreTest extends TestCase
             {
                 return new IssuedConfig(identifier: $identifier);
             }
+
+            public function fetchConfigLinks(string $identifier): array
+            {
+                return [];
+            }
         };
 
         $manager = new class($driver) extends PanelManager

@@ -176,6 +176,20 @@ final class PasarGuardDriver extends AbstractPanelDriver
         return true;
     }
 
+    public function fetchConfigLinks(string $identifier): array
+    {
+        $username = $this->normalizeIdentifier($identifier);
+
+        $response = $this->request('get', "/api/user/{$username}");
+        if (! $response->successful()) {
+            return [];
+        }
+
+        $links = $response->json('links');
+
+        return is_array($links) ? array_values(array_filter($links, 'is_string')) : [];
+    }
+
     public function rotateSubscription(string $identifier): IssuedConfig
     {
         $username = $this->normalizeIdentifier($identifier);

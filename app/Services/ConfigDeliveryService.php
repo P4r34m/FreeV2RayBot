@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Config;
 use App\Models\Setting;
+use App\Panels\PanelManager;
 use App\Support\SettingKey;
 use Illuminate\Support\Facades\Http;
 use Throwable;
@@ -35,6 +36,21 @@ class ConfigDeliveryService
     {
         if (! empty($config->config_links)) {
             return array_values($config->config_links);
+        }
+
+        // Ask the panel driver via its authenticated API — reliable for panels like
+        // PasarGuard that return the links directly but whose public subscription
+        // URL the bot may not be able to fetch/parse.
+        $config->loadMissing('panel');
+        if ($config->panel) {
+            try {
+                $links = app(PanelManager::class)->driver($config->panel)->fetchConfigLinks($config->remote_identifier);
+                if ($links !== []) {
+                    return array_values($links);
+                }
+            } catch (Throwable) {
+                // fall through to the subscription fetch
+            }
         }
 
         $url = $config->subscription_url;

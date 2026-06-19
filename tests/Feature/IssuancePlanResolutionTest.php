@@ -211,6 +211,11 @@ class IssuancePlanResolutionTest extends TestCase
                     subId: 'newsub',
                 );
             }
+
+            public function fetchConfigLinks(string $identifier): array
+            {
+                return [];
+            }
         };
 
         $manager = new class($driver) extends PanelManager

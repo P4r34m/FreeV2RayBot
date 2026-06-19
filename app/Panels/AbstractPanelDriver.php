@@ -77,6 +77,16 @@ abstract class AbstractPanelDriver implements PanelDriver
         throw new PanelException('این پنل از تعویض لینک اشتراک پشتیبانی نمی‌کند.');
     }
 
+    /**
+     * Default: no API for individual links — caller fetches the subscription URL.
+     *
+     * @return list<string>
+     */
+    public function fetchConfigLinks(string $identifier): array
+    {
+        return [];
+    }
+
     /** Raise a normalized panel error with context for logging. */
     protected function fail(string $message, array $context = [], ?\Throwable $previous = null): never
     {

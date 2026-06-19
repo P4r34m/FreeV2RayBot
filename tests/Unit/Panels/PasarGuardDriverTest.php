@@ -167,6 +167,21 @@ class PasarGuardDriverTest extends TestCase
         $this->assertSame('2027-01-01', $usage->expiresAt?->format('Y-m-d'));
     }
 
+    public function test_fetch_config_links_returns_links_from_the_user_api(): void
+    {
+        Http::fake([
+            self::BASE_URL.'/api/admin/token' => Http::response(['access_token' => 'tok-123']),
+            self::BASE_URL.'/api/user/dan' => Http::response([
+                'username' => 'dan',
+                'links' => ['vless://aaa', 'vmess://bbb'],
+            ]),
+        ]);
+
+        $links = (new PasarGuardDriver($this->panel()))->fetchConfigLinks('dan');
+
+        $this->assertSame(['vless://aaa', 'vmess://bbb'], $links);
+    }
+
     public function test_get_usage_parses_traffic_limit_and_status(): void
     {
         Http::fake([

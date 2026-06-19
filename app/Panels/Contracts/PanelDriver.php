@@ -67,4 +67,13 @@ interface PanelDriver
      * where the panel uses one). Throws PanelException if unsupported.
      */
     public function rotateSubscription(string $identifier): IssuedConfig;
+
+    /**
+     * The individual protocol links (vless://, vmess://, …) for a config, fetched
+     * from the panel's authenticated API. Returns an empty array when the panel
+     * doesn't expose them (caller falls back to fetching the subscription URL).
+     *
+     * @return list<string>
+     */
+    public function fetchConfigLinks(string $identifier): array;
 }
