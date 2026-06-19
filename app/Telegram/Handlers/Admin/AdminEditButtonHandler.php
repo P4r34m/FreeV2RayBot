@@ -19,7 +19,9 @@ class AdminEditButtonHandler
 
         $kb = InlineKeyboardMarkup::make();
         foreach (array_keys(ContentDefaults::buttons()) as $key) {
-            $kb->addRow(Btn::make(Content::buttonLabel($key), callback_data: 'admin:content:editbtn:'.$key));
+            // Content::button() carries the configured premium-emoji icon + color, so
+            // the admin sees exactly how each button looks here in the panel.
+            $kb->addRow(Content::button($key, 'admin:content:editbtn:'.$key));
         }
         $kb->addRow(Btn::make('🔙 بازگشت', callback_data: 'admin:content'));
 

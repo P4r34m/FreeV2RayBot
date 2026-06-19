@@ -27,7 +27,14 @@ class AdminMenuButtonsHandler
                 Btn::make('⬆️', callback_data: 'admin:menumove:up_'.$slug),
                 Btn::make('⬇️', callback_data: 'admin:menumove:down_'.$slug),
                 Btn::make($join, callback_data: 'admin:menujoin:'.$slug),
-                Btn::make($state.' '.Content::buttonLabel($contentKey), callback_data: 'admin:menubtn:'.$slug),
+                // Carry the configured premium-emoji icon + color so the admin sees
+                // each button exactly as the user does.
+                Btn::make(
+                    $state.' '.Content::buttonLabel($contentKey),
+                    callback_data: 'admin:menubtn:'.$slug,
+                    icon_custom_emoji_id: Content::iconEmojiId($contentKey),
+                    style: Content::buttonStyle($contentKey),
+                ),
             );
         }
 
