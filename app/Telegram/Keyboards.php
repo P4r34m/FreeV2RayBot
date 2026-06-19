@@ -170,12 +170,12 @@ class Keyboards
         // No is_persistent → the user can collapse the keyboard.
         $kb = ReplyKeyboardMarkup::make(resize_keyboard: true);
 
-        foreach (self::buildMenuRows(fn ($slug, $contentKey) => KeyboardButton::make(Content::buttonLabel($contentKey))) as $row) {
+        foreach (self::buildMenuRows(fn ($slug, $contentKey) => Content::replyButton($contentKey)) as $row) {
             $kb->addRow(...$row);
         }
 
         if ($isAdmin) {
-            $kb->addRow(KeyboardButton::make(Content::buttonLabel('menu.admin')));
+            $kb->addRow(Content::replyButton('menu.admin'));
         }
 
         return $kb;

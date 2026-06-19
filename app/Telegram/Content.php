@@ -6,6 +6,7 @@ use App\Models\BotButton;
 use App\Models\BotText;
 use Illuminate\Support\Facades\Cache;
 use SergiX44\Nutgram\Telegram\Types\Keyboard\InlineKeyboardButton as Btn;
+use SergiX44\Nutgram\Telegram\Types\Keyboard\KeyboardButton;
 
 /**
  * Resolves user-facing texts and button labels from the admin-editable
@@ -49,6 +50,16 @@ class Content
             text: static::buttonLabel($key),
             url: $url,
             callback_data: $callbackData,
+            icon_custom_emoji_id: static::iconEmojiId($key),
+            style: static::buttonStyle($key),
+        );
+    }
+
+    /** Build a reply-keyboard button from a content key (+ premium-emoji icon & color). */
+    public static function replyButton(string $key): KeyboardButton
+    {
+        return KeyboardButton::make(
+            text: static::buttonLabel($key),
             icon_custom_emoji_id: static::iconEmojiId($key),
             style: static::buttonStyle($key),
         );

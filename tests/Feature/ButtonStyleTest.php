@@ -35,4 +35,20 @@ class ButtonStyleTest extends TestCase
         $this->assertNull($btn->icon_custom_emoji_id);
         $this->assertNull($btn->style);
     }
+
+    public function test_reply_keyboard_button_also_applies_icon_and_style(): void
+    {
+        BotButton::create([
+            'key' => 'menu.get_config',
+            'label' => 'دریافت کانفیگ',
+            'icon_custom_emoji_id' => '999',
+            'style' => 'danger',
+        ]);
+
+        $btn = Content::replyButton('menu.get_config');
+
+        $this->assertSame('دریافت کانفیگ', $btn->text);
+        $this->assertSame('999', $btn->icon_custom_emoji_id);
+        $this->assertSame('danger', $btn->style);
+    }
 }
