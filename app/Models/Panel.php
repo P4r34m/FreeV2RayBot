@@ -51,6 +51,26 @@ class Panel extends Model
 
     public function hasCapacity(): bool
     {
-        return $this->capacity === null || $this->active_config_count < $this->capacity;
+        return $this->isUnlimited() || $this->active_config_count < $this->capacity;
+    }
+
+    /** Unlimited config capacity (no cap set, or capacity = -1). */
+    public function isUnlimited(): bool
+    {
+        return $this->capacity === null || $this->capacity < 0;
+    }
+
+    /** Remaining config slots, or null when capacity is unlimited. */
+    public function remainingConfigs(): ?int
+    {
+        return $this->isUnlimited() ? null : max(0, $this->capacity - $this->active_config_count);
+    }
+
+    /** "نامحدود" or the remaining count as a string. */
+    public function remainingHuman(): string
+    {
+        $remaining = $this->remainingConfigs();
+
+        return $remaining === null ? 'نامحدود' : (string) $remaining;
     }
 }

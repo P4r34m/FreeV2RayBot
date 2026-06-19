@@ -67,21 +67,17 @@ class IssueNewHandler
             return;
         }
 
-        // Several servers → let the user choose which one their config comes from.
-        if ($panels->count() > 1) {
-            $kb = InlineKeyboardMarkup::make();
-            foreach ($panels as $panel) {
-                $kb->addRow(Btn::make('🖥 '.$panel->name, callback_data: 'config:new:'.$panel->id));
-            }
-            $kb->addRow(Keyboards::backButton(Keyboards::CB_GET_CONFIG));
-
-            Reply::screen($bot, Content::text('config.pick_server'), $kb);
-
-            return;
+        // Always show the server(s) — even a single one — with remaining capacity
+        // in parentheses, and let the user pick.
+        $kb = InlineKeyboardMarkup::make();
+        foreach ($panels as $panel) {
+            $remaining = $panel->remainingConfigs();
+            $suffix = $remaining === null ? 'نامحدود' : $remaining.' باقی‌مانده';
+            $kb->addRow(Btn::make("🖥 {$panel->name} ({$suffix})", callback_data: 'config:new:'.$panel->id));
         }
+        $kb->addRow(Keyboards::backButton(Keyboards::CB_GET_CONFIG));
 
-        // Exactly one server → nothing to choose; issue on it right away.
-        self::dispatch($bot, $user, $panels->first()->id);
+        Reply::screen($bot, Content::text('config.pick_server'), $kb);
     }
 
     /** Kick off issuance (panelId null => auto-select). */

@@ -40,4 +40,23 @@ class PanelSelectorTest extends TestCase
 
         $this->assertSame(0, app(PanelSelector::class)->available()->count());
     }
+
+    public function test_capacity_minus_one_is_unlimited(): void
+    {
+        $panel = $this->panel(['name' => 'inf', 'capacity' => -1, 'active_config_count' => 999]);
+
+        $this->assertTrue($panel->isUnlimited());
+        $this->assertTrue($panel->hasCapacity());
+        $this->assertNull($panel->remainingConfigs());
+        $this->assertSame('نامحدود', $panel->remainingHuman());
+    }
+
+    public function test_remaining_configs_counts_down(): void
+    {
+        $panel = $this->panel(['name' => 'lim', 'capacity' => 10, 'active_config_count' => 3]);
+
+        $this->assertSame(7, $panel->remainingConfigs());
+        $this->assertSame('7', $panel->remainingHuman());
+        $this->assertTrue($panel->hasCapacity());
+    }
 }

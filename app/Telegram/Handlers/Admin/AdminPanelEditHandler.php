@@ -39,14 +39,18 @@ class AdminPanelEditHandler
         // API token is available for every panel type — for 3x-ui it bypasses the
         // CSRF protection on POST /login (recommended for v3.x panels).
         $kb->addRow(Btn::make('🔑 توکن API', callback_data: "admin:panels:editfield:{$panel->id}_api_token"));
+        $kb->addRow(Btn::make('📊 ظرفیت کانفیگ', callback_data: "admin:panels:editfield:{$panel->id}_capacity"));
 
         $kb->addRow(Btn::make('🔙 بازگشت', callback_data: "admin:panels:view:{$panel->id}"));
+
+        $capacity = $panel->isUnlimited() ? 'نامحدود' : $panel->capacity.' (باقی‌مانده: '.$panel->remainingHuman().')';
 
         Reply::screen(
             $bot,
             "✏️ <b>ویرایش پنل — {$panel->name}</b>\n".
             'نوع: '.$panel->type->label()."\n".
-            'آدرس فعلی: <code>'.htmlspecialchars($panel->base_url, ENT_QUOTES)."</code>\n\n".
+            'آدرس فعلی: <code>'.htmlspecialchars($panel->base_url, ENT_QUOTES)."</code>\n".
+            "ظرفیت: {$capacity}\n\n".
             'کدام مورد را ویرایش می‌کنید؟ (یوزر/پس و توکن نمایش داده نمی‌شوند؛ مقدار جدید جایگزین می‌شود.)',
             $kb,
         );

@@ -57,7 +57,7 @@ class UserConfigLimitTest extends TestCase
             'status' => ConfigStatus::Active, 'expires_at' => now()->subDay(),
         ]);
 
-        $bot->hearCallbackQueryData('config:new')->reply();
+        $bot->hearCallbackQueryData('config:new:'.$panel->id)->reply();
 
         Queue::assertPushed(IssueConfigJob::class);
     }
@@ -78,7 +78,7 @@ class UserConfigLimitTest extends TestCase
             'status' => ConfigStatus::Active, 'expires_at' => now()->addDays(30),
         ]);
 
-        $bot->hearCallbackQueryData('config:new')->reply();
+        $bot->hearCallbackQueryData('config:new:'.$panel->id)->reply();
 
         Queue::assertPushed(IssueConfigJob::class);
     }

@@ -21,7 +21,7 @@ class GetConfigFlowTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_get_config_without_active_config_dispatches_issuance_on_the_only_panel(): void
+    public function test_get_config_without_active_config_shows_picker_then_issues_on_tap(): void
     {
         Queue::fake();
 
@@ -35,8 +35,12 @@ class GetConfigFlowTest extends TestCase
         $bot->willStartConversation(); // reuse one user/chat across the updates
         $bot->hearText('/start')->reply();
 
+        // The server picker is shown (even for a single panel) — not auto-issued.
         $bot->hearCallbackQueryData('get_config')->reply();
+        Queue::assertNotPushed(IssueConfigJob::class);
 
+        // Tapping the panel issues on it.
+        $bot->hearCallbackQueryData('config:new:'.$panel->id)->reply();
         Queue::assertPushed(
             IssueConfigJob::class,
             fn (IssueConfigJob $job) => $job->mode === 'new' && $job->panelId === $panel->id,

@@ -29,8 +29,8 @@ class PanelForm
                 Toggle::make('is_active')->label('فعال')->default(true),
                 TextInput::make('priority')->label('اولویت انتخاب')->numeric()->default(0)
                     ->helperText('بالاتر = ترجیح بیشتر هنگام ساخت کانفیگ'),
-                TextInput::make('capacity')->label('ظرفیت (حداکثر کانفیگ)')->numeric()
-                    ->helperText('خالی = نامحدود'),
+                TextInput::make('capacity')->label('ظرفیت (حداکثر کانفیگ)')->numeric()->minValue(-1)
+                    ->helperText('خالی یا -1 = نامحدود'),
             ]),
 
             Section::make('احراز هویت')->columns(2)->schema([

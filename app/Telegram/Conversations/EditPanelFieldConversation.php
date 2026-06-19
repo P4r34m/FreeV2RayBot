@@ -10,7 +10,7 @@ use SergiX44\Nutgram\Nutgram;
 /** Edit a single field of an existing panel (name / base_url / username / password / api_token). */
 class EditPanelFieldConversation extends Conversation
 {
-    private const FIELDS = ['name', 'base_url', 'username', 'password', 'api_token'];
+    private const FIELDS = ['name', 'base_url', 'username', 'password', 'api_token', 'capacity'];
 
     private const LABELS = [
         'name' => 'نام',
@@ -18,6 +18,7 @@ class EditPanelFieldConversation extends Conversation
         'username' => 'یوزرنیم',
         'password' => 'پسورد',
         'api_token' => 'توکن API',
+        'capacity' => 'ظرفیت (تعداد کانفیگ مجاز، -1 = نامحدود)',
     ];
 
     public ?int $panelId = null;
@@ -65,6 +66,13 @@ class EditPanelFieldConversation extends Conversation
             return;
         }
 
+        if ($this->field === 'capacity' && ! preg_match('/^-?\d+$/', $text)) {
+            $bot->sendMessage('عدد نامعتبر است. یک عدد صحیح بفرستید (-1 یعنی نامحدود) یا /cancel.');
+            $this->next('capture');
+
+            return;
+        }
+
         $panel = Panel::find($this->panelId);
         if (! $panel) {
             $bot->sendMessage('پنل پیدا نشد.');
@@ -73,7 +81,11 @@ class EditPanelFieldConversation extends Conversation
             return;
         }
 
-        $value = $this->field === 'base_url' ? rtrim($text, '/') : $text;
+        $value = match ($this->field) {
+            'base_url' => rtrim($text, '/'),
+            'capacity' => (int) $text,
+            default => $text,
+        };
         $panel->update([$this->field => $value]);
 
         // Credentials/URL changed -> drop any cached auth token/session so the next
