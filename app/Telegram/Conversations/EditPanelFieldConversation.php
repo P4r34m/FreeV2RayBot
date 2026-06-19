@@ -3,6 +3,7 @@
 namespace App\Telegram\Conversations;
 
 use App\Models\Panel;
+use App\Support\PremiumEmoji;
 use Illuminate\Support\Facades\Cache;
 use SergiX44\Nutgram\Conversations\Conversation;
 use SergiX44\Nutgram\Nutgram;
@@ -34,8 +35,12 @@ class EditPanelFieldConversation extends Conversation
             return;
         }
 
+        $hint = $this->field === 'name'
+            ? "\n💡 اگر ایموجی پریمیوم بخواهی، همان ایموجی را داخل نام بفرست؛ خودم آیدی‌اش را پیدا می‌کنم و روی دکمه‌ی سرور اعمال می‌کنم."
+            : '';
+
         $bot->sendMessage(
-            "✏️ مقدار جدید برای «".self::LABELS[$this->field]."» را بفرستید.\n\nبرای لغو: /cancel"
+            "✏️ مقدار جدید برای «".self::LABELS[$this->field]."» را بفرستید.".$hint."\n\nبرای لغو: /cancel"
         );
 
         $this->next('capture');
@@ -76,6 +81,36 @@ class EditPanelFieldConversation extends Conversation
         $panel = Panel::find($this->panelId);
         if (! $panel) {
             $bot->sendMessage('پنل پیدا نشد.');
+            $this->end();
+
+            return;
+        }
+
+        // The panel name is shown inside a button's TEXT, which can't render a
+        // premium emoji — so auto-detect one, store it as the panel's icon, and
+        // keep the (stripped) plain name. The picker uses the icon field for it.
+        if ($this->field === 'name') {
+            [$name, $iconId] = PremiumEmoji::extract($bot->message());
+
+            if ($name === '') {
+                $bot->sendMessage('نام خالی است. یک نام (به‌همراه ایموجی دلخواه) بفرستید یا /cancel.');
+                $this->next('capture');
+
+                return;
+            }
+
+            $settings = $panel->settings ?? [];
+            if ($iconId !== null) {
+                $settings['icon_emoji_id'] = $iconId;
+            } else {
+                unset($settings['icon_emoji_id']);
+            }
+
+            $panel->update(['name' => $name, 'settings' => $settings]);
+
+            $bot->sendMessage($iconId !== null
+                ? '✅ ذخیره شد (ایموجی پریمیوم برای این سرور هم اعمال شد).'
+                : '✅ ذخیره شد.');
             $this->end();
 
             return;

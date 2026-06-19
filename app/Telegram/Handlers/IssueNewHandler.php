@@ -73,16 +73,18 @@ class IssueNewHandler
         foreach ($panels as $panel) {
             $remaining = $panel->remainingConfigs();
             $suffix = $remaining === null ? 'نامحدود' : $remaining.' باقی‌مانده';
-            // No hardcoded icon; the admin can set a premium-emoji icon + color for
-            // these via the "menu.server" button in the content editor.
+            // Per-panel premium emoji (auto-detected from the panel name when the admin
+            // sets it) wins; otherwise fall back to the shared "menu.server" icon/color.
             $kb->addRow(Btn::make(
                 text: $panel->name.' ('.$suffix.')',
                 callback_data: 'config:new:'.$panel->id,
-                icon_custom_emoji_id: Content::iconEmojiId('menu.server'),
+                icon_custom_emoji_id: data_get($panel->settings, 'icon_emoji_id') ?: Content::iconEmojiId('menu.server'),
                 style: Content::buttonStyle('menu.server'),
             ));
         }
-        $kb->addRow(Keyboards::backButton(Keyboards::CB_GET_CONFIG));
+        // Back goes to the MAIN MENU, not get_config — with no active config,
+        // get_config IS this picker, so pointing back at it would loop.
+        $kb->addRow(Keyboards::backButton(Keyboards::CB_MENU));
 
         Reply::screen($bot, Content::text('config.pick_server'), $kb);
     }

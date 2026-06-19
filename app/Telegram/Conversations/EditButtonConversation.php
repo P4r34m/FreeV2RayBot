@@ -3,11 +3,10 @@
 namespace App\Telegram\Conversations;
 
 use App\Models\BotButton;
+use App\Support\PremiumEmoji;
 use App\Telegram\ContentDefaults;
 use SergiX44\Nutgram\Conversations\Conversation;
 use SergiX44\Nutgram\Nutgram;
-use SergiX44\Nutgram\Telegram\Properties\MessageEntityType;
-use SergiX44\Nutgram\Telegram\Types\Message\Message;
 
 /**
  * Admin flow to edit a button: pick a key, send the new label (any premium emoji
@@ -93,7 +92,7 @@ class EditButtonConversation extends Conversation
         }
 
         // Auto-detect a premium emoji from the message and strip it from the label.
-        [$label, $icon] = $this->extractEmoji($message);
+        [$label, $icon] = PremiumEmoji::extract($message);
 
         if ($label === '') {
             $bot->sendMessage('عنوان خالی است. یک عنوان (به‌همراه ایموجی دلخواه) بفرستید یا /cancel.');
@@ -137,30 +136,5 @@ class EditButtonConversation extends Conversation
         $bot->sendMessage("✅ دکمه‌ی کلید <code>{$this->key}</code> ذخیره شد.", parse_mode: 'HTML');
 
         $this->end();
-    }
-
-    /**
-     * Pull a premium (custom) emoji id out of the message entities and return
-     * [labelWithoutEmoji, customEmojiId|null]. Telegram offsets are UTF-16 units.
-     *
-     * @return array{0: string, 1: ?string}
-     */
-    private function extractEmoji(?Message $message): array
-    {
-        $text = trim((string) ($message?->text ?? ''));
-
-        foreach ($message?->entities ?? [] as $entity) {
-            $type = $entity->type instanceof MessageEntityType ? $entity->type->value : $entity->type;
-
-            if ($type === 'custom_emoji' && $entity->custom_emoji_id) {
-                $u16 = mb_convert_encoding((string) $message->text, 'UTF-16BE', 'UTF-8');
-                $stripped = substr($u16, 0, $entity->offset * 2)
-                    .substr($u16, ($entity->offset + $entity->length) * 2);
-
-                return [trim((string) mb_convert_encoding($stripped, 'UTF-8', 'UTF-16BE')), $entity->custom_emoji_id];
-            }
-        }
-
-        return [$text, null];
     }
 }
