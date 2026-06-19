@@ -25,6 +25,11 @@ class ConfigViewHandler
         // Scope by the user's own configs so one user can't view another's.
         $config = $user->configs()->whereKey((int) $id)->with(['panel', 'plan'])->first();
 
+        // Pull fresh usage/remaining/expiry straight from the panel at view time.
+        if ($config) {
+            $config = app(\App\Services\ConfigUsageService::class)->refresh($config);
+        }
+
         self::render($bot, $config);
     }
 
