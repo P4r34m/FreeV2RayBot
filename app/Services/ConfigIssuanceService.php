@@ -203,9 +203,18 @@ class ConfigIssuanceService
 
         $newLimit = $config->data_limit_bytes > 0 ? $config->data_limit_bytes + $addBytes : 0;
 
-        // Extend from whichever is later: now, or the current expiry.
-        $base = max(now()->timestamp, $config->expires_at?->timestamp ?? now()->timestamp);
-        $expirySeconds = $addDays > 0 ? ($base + $addDays * 86400) - now()->timestamp : 0;
+        $now = now()->timestamp;
+        $currentExpiry = $config->expires_at?->timestamp;
+
+        if ($addDays > 0) {
+            // Stack onto whichever is later: now, or the current expiry.
+            $base = max($now, $currentExpiry ?? $now);
+            $expirySeconds = ($base + $addDays * 86400) - $now;
+        } else {
+            // Volume-only top-up: KEEP the current expiry so the panel doesn't read 0
+            // (= unlimited) and wipe it. No/expired expiry stays unlimited.
+            $expirySeconds = $currentExpiry !== null && $currentExpiry > $now ? $currentExpiry - $now : 0;
+        }
 
         $spec = new ConfigSpec(
             dataLimitBytes: $newLimit,
@@ -216,12 +225,16 @@ class ConfigIssuanceService
 
         $issued = $this->panels->driver($config->panel)->renewConfig($config->remote_identifier, $spec);
 
-        return DB::transaction(function () use ($config, $issued, $newLimit, $expirySeconds) {
+        return DB::transaction(function () use ($config, $issued, $newLimit, $expirySeconds, $addDays) {
             $config->update([
                 'data_limit_bytes' => $issued->dataLimitBytes ?: $newLimit,
-                'expires_at' => $issued->expiresAt ?? ($expirySeconds > 0 ? now()->addSeconds($expirySeconds) : $config->expires_at),
-                // Now on an absolute expiry, so the on-hold duration no longer applies.
-                'expiry_duration_days' => $expirySeconds > 0 ? null : $config->expiry_duration_days,
+                // Time-extending top-ups move the local expiry; a volume-only top-up
+                // keeps it exactly as-is (the panel still gets the same expiry above).
+                'expires_at' => $addDays > 0
+                    ? ($issued->expiresAt ?? now()->addSeconds($expirySeconds))
+                    : $config->expires_at,
+                // A moved expiry is absolute, so the on-hold duration no longer applies.
+                'expiry_duration_days' => $addDays > 0 ? null : $config->expiry_duration_days,
                 'status' => ConfigStatus::Active,
                 'last_synced_at' => now(),
                 'subscription_url' => $issued->subscriptionUrl ?: $config->subscription_url,
