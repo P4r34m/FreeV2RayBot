@@ -16,7 +16,9 @@ class AdminMenuHandler
     {
         Reply::toast($bot);
 
-        $panelUrl = rtrim((string) config('app.url'), '/').'/admin';
+        // Use the configured panel path so the button follows it when the admin
+        // changes it from settings (not a hard-coded /admin).
+        $panelUrl = rtrim((string) config('app.url'), '/').'/'.\App\Support\PanelConfig::path();
         $on = Setting::bool(SettingKey::BOT_ENABLED, true);
         $power = $on ? '🟢 روشن — برای خاموش‌کردن بزنید' : '🔴 خاموش — برای روشن‌کردن بزنید';
 
