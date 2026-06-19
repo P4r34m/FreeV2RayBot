@@ -72,11 +72,14 @@ class IssueNewHandler
         $kb = InlineKeyboardMarkup::make();
         foreach ($panels as $panel) {
             $remaining = $panel->remainingConfigs();
-            $suffix = $remaining === null ? 'نامحدود' : $remaining.' باقی‌مانده';
+            // Show "(N ساب باقی‌مانده)"; for an unlimited panel show nothing at all.
+            $label = $remaining === null
+                ? $panel->name
+                : $panel->name.' ('.$remaining.' ساب باقی‌مانده)';
             // Per-panel premium emoji (auto-detected from the panel name when the admin
             // sets it) wins; otherwise fall back to the shared "menu.server" icon/color.
             $kb->addRow(Btn::make(
-                text: $panel->name.' ('.$suffix.')',
+                text: $label,
                 callback_data: 'config:new:'.$panel->id,
                 icon_custom_emoji_id: data_get($panel->settings, 'icon_emoji_id') ?: Content::iconEmojiId('menu.server'),
                 style: Content::buttonStyle('menu.server'),
