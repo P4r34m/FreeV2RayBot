@@ -47,7 +47,7 @@ class AdminPanelEditHandler
 
         Reply::screen(
             $bot,
-            "✏️ <b>ویرایش پنل — {$panel->name}</b>\n".
+            '✏️ <b>ویرایش پنل — '.e($panel->name)."</b>\n".
             'نوع: '.$panel->type->label()."\n".
             'آدرس فعلی: <code>'.htmlspecialchars($panel->base_url, ENT_QUOTES)."</code>\n".
             "ظرفیت: {$capacity}\n\n".

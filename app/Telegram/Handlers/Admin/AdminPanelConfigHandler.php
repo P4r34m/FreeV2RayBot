@@ -35,7 +35,7 @@ class AdminPanelConfigHandler
         };
 
         $lines = [
-            "⚙️ <b>تنظیمات بیشتر — {$panel->name}</b>",
+            '⚙️ <b>تنظیمات بیشتر — '.e($panel->name).'</b>',
             'نوع: '.$panel->type->label(),
             '',
             $target,

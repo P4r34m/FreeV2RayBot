@@ -28,7 +28,7 @@ class AdminCoinPlanViewHandler
         $duration = $plan->duration_days > 0 ? $plan->duration_days.' روز' : 'بدون انقضا';
         $state = $plan->is_active ? '🟢 فعال' : '🔴 غیرفعال';
 
-        $body = "🛒 <b>{$plan->name}</b>\n\n📦 حجم: {$volume}\n⏳ مدت: {$duration}\n🪙 قیمت: {$plan->coin_price} سکه\n\nوضعیت: {$state}";
+        $body = '🛒 <b>'.e($plan->name)."</b>\n\n📦 حجم: {$volume}\n⏳ مدت: {$duration}\n🪙 قیمت: {$plan->coin_price} سکه\n\nوضعیت: {$state}";
 
         $kb = InlineKeyboardMarkup::make()
             ->addRow(

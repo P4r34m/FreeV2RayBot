@@ -23,7 +23,7 @@ class ProfileHandler
 
         $text = Content::text('profile.body', [
             'id' => $user->telegram_id,
-            'name' => $user->fullName(),
+            'name' => e($user->fullName()),
             'joined' => $user->created_at?->format('Y-m-d') ?? '-',
             'configs' => $user->configs()->count(),
             'active' => $user->configs()->where('status', ConfigStatus::Active->value)->count(),

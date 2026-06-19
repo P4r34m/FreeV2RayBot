@@ -129,7 +129,7 @@ class IssueConfigJob implements ShouldQueue
 
         $reports->send($event, implode("\n", [
             "<b>{$title}</b>",
-            "کاربر: {$user->displayHandle()} (<code>{$user->telegram_id}</code>)",
+            'کاربر: '.e($user->displayHandle()).' (<code>'.$user->telegram_id.'</code>)',
             'پنل: '.($config->panel?->name ?? '—'),
             'حجم: '.$config->limitHuman(),
         ]));
@@ -177,7 +177,7 @@ class IssueConfigJob implements ShouldQueue
     {
         app(ReportService::class)->send(
             ReportService::REFERRAL,
-            "👥 <b>زیرمجموعه‌ی جدید تأیید شد</b>\nمعرف: {$referrer->displayHandle()} (<code>{$referrer->telegram_id}</code>)\nمجموع: {$referrer->referral_count}",
+            "👥 <b>زیرمجموعه‌ی جدید تأیید شد</b>\nمعرف: ".e($referrer->displayHandle()).' (<code>'.$referrer->telegram_id.'</code>)'."\nمجموع: {$referrer->referral_count}",
         );
 
         $referrals = app(ReferralService::class);

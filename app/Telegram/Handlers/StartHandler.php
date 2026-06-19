@@ -30,7 +30,7 @@ class StartHandler
         if ($user->wasRecentlyCreated) {
             $this->reports->send(
                 ReportService::NEW_USER,
-                "🆕 <b>کاربر جدید</b>\n{$user->displayHandle()} (<code>{$user->telegram_id}</code>)",
+                "🆕 <b>کاربر جدید</b>\n".e($user->displayHandle()).' (<code>'.$user->telegram_id.'</code>)',
             );
         }
 

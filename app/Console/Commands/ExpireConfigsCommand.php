@@ -50,7 +50,15 @@ class ExpireConfigsCommand extends Command
         $timeUp = $config->expires_at !== null && $config->expires_at->isPast();
         $trafficUp = $config->data_limit_bytes > 0 && $config->used_bytes >= $config->data_limit_bytes;
 
-        return $timeUp || $trafficUp;
+        // On-hold configs the user never connected to keep expires_at = null. Reclaim
+        // them once their duration window has elapsed since issuance — otherwise they
+        // would hold the user's (single) free slot and panel capacity forever.
+        $onHoldLapsed = $config->expires_at === null
+            && $config->expiry_duration_days > 0
+            && $config->created_at !== null
+            && $config->created_at->copy()->addDays($config->expiry_duration_days)->isPast();
+
+        return $timeUp || $trafficUp || $onHoldLapsed;
     }
 
     protected function disableRemotely(PanelManager $panels, Config $config): void

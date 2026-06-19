@@ -29,7 +29,7 @@ class AdminPanelsHandler
                     'failed' => '⚠️ خطا',
                     default => '— نامشخص',
                 };
-                $lines[] = "{$state} <b>{$p->name}</b> · {$p->type->label()} · {$health}";
+                $lines[] = "{$state} <b>".e($p->name).'</b> · '.$p->type->label()." · {$health}";
             }
         }
 

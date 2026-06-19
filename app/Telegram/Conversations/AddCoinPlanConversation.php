@@ -124,7 +124,7 @@ class AddCoinPlanConversation extends Conversation
             'is_active' => true,
         ]);
 
-        $bot->sendMessage("✅ بسته اضافه شد:\n<b>{$plan->name}</b> — {$plan->label()}", parse_mode: 'HTML');
+        $bot->sendMessage("✅ بسته اضافه شد:\n<b>".e($plan->name).'</b> — '.$plan->label(), parse_mode: 'HTML');
         $this->end();
     }
 }

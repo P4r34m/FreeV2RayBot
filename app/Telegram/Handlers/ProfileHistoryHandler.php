@@ -31,7 +31,7 @@ class ProfileHistoryHandler
                     $config->created_at?->format('Y-m-d') ?? '-',
                     $config->status->label(),
                     $config->limitHuman(),
-                    $config->panel?->name ?? '—',
+                    e($config->panel?->name ?? '—'),
                 );
 
                 // Surface the link for active subscriptions so the user can grab

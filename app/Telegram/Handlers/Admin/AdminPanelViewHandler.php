@@ -38,7 +38,7 @@ class AdminPanelViewHandler
         };
 
         $lines = [
-            "🖥 <b>{$panel->name}</b>",
+            '🖥 <b>'.e($panel->name).'</b>',
             '',
             'نوع: '.$panel->type->label(),
             'آدرس: <code>'.htmlspecialchars($panel->base_url, ENT_QUOTES).'</code>',

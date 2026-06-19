@@ -79,7 +79,7 @@ class AntiSpamMiddleware
 
             $this->reports->send(
                 ReportService::BLOCKED,
-                "🚫 <b>بلاک موقت (اسپم)</b>\nکاربر: {$user->displayHandle()} (<code>{$user->telegram_id}</code>)\nتا: {$this->fmt($until)}",
+                "🚫 <b>بلاک موقت (اسپم)</b>\nکاربر: ".e($user->displayHandle()).' (<code>'.$user->telegram_id.'</code>)'."\nتا: {$this->fmt($until)}",
             );
         }
 

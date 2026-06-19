@@ -193,7 +193,7 @@ class AddPanelConversation extends Conversation
         ]);
 
         $bot->sendMessage(
-            "✅ پنل «{$panel->name}» ({$this->type->label()}) اضافه شد.\n\n".
+            '✅ پنل «'.e($panel->name).'» ('.$this->type->label().") اضافه شد.\n\n".
             "حالا از فهرست پنل‌ها واردش شوید و:\n".
             "• «🔌 تست اتصال» را بزنید،\n".
             "• از «⚙️ تنظیمات بیشتر» اینباند/گروه/اسکواد را انتخاب کنید.",
