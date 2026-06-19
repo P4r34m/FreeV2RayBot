@@ -36,12 +36,18 @@ class CoinPlanHandler
             ->where('source', \App\Models\Config::SOURCE_COIN)
             ->exists();
 
-        $kb = InlineKeyboardMarkup::make()
-            ->addRow(Btn::make('🆕 کانفیگ جدید', callback_data: 'coin:buynew:'.$plan->id));
-        if ($hasCoinConfigs) {
-            $kb->addRow(Btn::make('➕ افزودن به اشتراک موجود', callback_data: 'coin:buyext:'.$plan->id));
+        // A first-time coin buyer has nothing to extend, so don't ask how to apply
+        // the package — just issue a new config straight away.
+        if (! $hasCoinConfigs) {
+            (new CoinBuyNewHandler)($bot, (string) $plan->id);
+
+            return;
         }
-        $kb->addRow(Keyboards::backButton('coin:store'));
+
+        $kb = InlineKeyboardMarkup::make()
+            ->addRow(Btn::make('🆕 کانفیگ جدید', callback_data: 'coin:buynew:'.$plan->id))
+            ->addRow(Btn::make('➕ افزودن به اشتراک موجود', callback_data: 'coin:buyext:'.$plan->id))
+            ->addRow(Keyboards::backButton('coin:store'));
 
         Reply::screen($bot, Content::text('coin.plan_body', [
             'name' => $plan->name,

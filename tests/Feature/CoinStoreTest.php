@@ -23,6 +23,7 @@ use App\Services\ReferralService;
 use App\Support\Bytes;
 use App\Support\SettingKey;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use SergiX44\Nutgram\Nutgram;
 use Tests\TestCase;
 
 /**
@@ -131,6 +132,59 @@ class CoinStoreTest extends TestCase
         } catch (\InvalidArgumentException) {
             $this->assertSame(100, $user->fresh()->coins); // never charged
         }
+    }
+
+    public function test_first_time_coin_buyer_gets_a_new_config_without_being_asked(): void
+    {
+        Setting::put(SettingKey::REFERRAL_MODE, 'coin');
+        $this->fakePanel();
+        BotUser::create(['telegram_id' => 8100, 'coins' => 100]);
+        $plan = CoinPlan::create([
+            'name' => '100G', 'data_limit_bytes' => 100 * Bytes::GB, 'duration_days' => 30,
+            'coin_price' => 50, 'is_active' => true,
+        ]);
+
+        $bot = $this->userBot(8100);
+        $bot->hearCallbackQueryData('coin:plan:'.$plan->id)->reply();
+
+        // The apply-method screen was skipped and a new coin config was issued.
+        $this->assertSame(1, Config::where('source', Config::SOURCE_COIN)->count());
+        $this->assertSame(50, BotUser::where('telegram_id', 8100)->value('coins'));
+    }
+
+    public function test_existing_coin_config_holder_is_still_asked_how_to_apply(): void
+    {
+        Setting::put(SettingKey::REFERRAL_MODE, 'coin');
+        $panel = $this->fakePanel();
+        $user = BotUser::create(['telegram_id' => 8101, 'coins' => 100]);
+        $user->configs()->create([
+            'panel_id' => $panel->id, 'source' => Config::SOURCE_COIN, 'remote_identifier' => 'fv_e',
+            'data_limit_bytes' => Bytes::fromGb(10), 'status' => ConfigStatus::Active, 'expires_at' => now()->addDays(5),
+        ]);
+        $plan = CoinPlan::create([
+            'name' => 'x', 'data_limit_bytes' => Bytes::fromGb(5), 'duration_days' => 5,
+            'coin_price' => 50, 'is_active' => true,
+        ]);
+
+        $bot = $this->userBot(8101);
+        $bot->hearCallbackQueryData('coin:plan:'.$plan->id)->reply();
+
+        // The choice screen was shown — no auto-purchase, coins untouched.
+        $this->assertSame(1, Config::where('source', Config::SOURCE_COIN)->count());
+        $this->assertSame(100, BotUser::where('telegram_id', 8101)->value('coins'));
+    }
+
+    private function userBot(int $id): Nutgram
+    {
+        Setting::put(SettingKey::ANTISPAM_ENABLED, false);
+
+        /** @var Nutgram $bot */
+        $bot = app(Nutgram::class);
+        // Remember the first update's user so later callbacks come from the same id.
+        $bot->willStartConversation();
+        $bot->hearMessage(['from' => ['id' => $id, 'is_bot' => false, 'first_name' => 'U'], 'text' => '/start'])->reply();
+
+        return $bot;
     }
 
     /** A panel backed by a fake driver that echoes the spec into the IssuedConfig. */
