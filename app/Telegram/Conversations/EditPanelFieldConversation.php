@@ -83,7 +83,9 @@ class EditPanelFieldConversation extends Conversation
 
         $value = match ($this->field) {
             'base_url' => rtrim($text, '/'),
-            'capacity' => (int) $text,
+            // The column is unsigned; store "unlimited" as null (a negative input
+            // such as -1 means unlimited).
+            'capacity' => (int) $text < 0 ? null : (int) $text,
             default => $text,
         };
         $panel->update([$this->field => $value]);
