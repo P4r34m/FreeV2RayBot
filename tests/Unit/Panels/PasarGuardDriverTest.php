@@ -113,6 +113,30 @@ class PasarGuardDriverTest extends TestCase
         });
     }
 
+    public function test_renew_recreates_the_user_when_missing_on_the_panel(): void
+    {
+        Http::fake([
+            self::BASE_URL.'/api/admin/token' => Http::response(['access_token' => 'tok-123']),
+            // PUT renew → user is gone from the (re-pointed) panel.
+            self::BASE_URL.'/api/user/zoe' => Http::response(['detail' => 'User not found'], 404),
+            // Fallback POST create → succeeds, returns the fresh account.
+            self::BASE_URL.'/api/user' => Http::response([
+                'username' => 'zoe', 'subscription_url' => '/sub/new', 'data_limit' => Bytes::GB, 'expire' => 1_900_000_000,
+            ], 201),
+        ]);
+
+        $driver = new PasarGuardDriver($this->panel(['group_ids' => [30]]));
+
+        $issued = $driver->renewConfig('zoe', new ConfigSpec(
+            dataLimitBytes: Bytes::GB, expirySeconds: 86_400, identifier: 'zoe',
+        ));
+
+        // It fell back to a create (POST /api/user) and returned the new account.
+        Http::assertSent(fn ($r) => $r->url() === self::BASE_URL.'/api/user' && $r->method() === 'POST');
+        $this->assertSame('zoe', $issued->identifier);
+        $this->assertSame(self::BASE_URL.'/sub/new', $issued->subscriptionUrl);
+    }
+
     public function test_create_config_sends_empty_proxy_protocols_as_json_objects_not_arrays(): void
     {
         Http::fake([

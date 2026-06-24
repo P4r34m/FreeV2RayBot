@@ -55,6 +55,13 @@ final class PasarGuardDriver extends AbstractPanelDriver
         // Re-enable, bump expiry and (possibly) raise the data limit in one PUT.
         $response = $this->request('put', "/api/user/{$username}", $this->userPayload($username, $spec));
 
+        // The account may be gone from the panel (e.g. the panel was re-pointed to a
+        // fresh server, or the config expired before it was migrated). Re-create it so
+        // a renew transparently re-provisions the user on the current server.
+        if ($response->status() === 404) {
+            return $this->createConfig($spec->withIdentifier($identifier));
+        }
+
         if (! $response->successful()) {
             $this->fail('PasarGuard user renewal failed.', $this->errorContext($response, ['username' => $username]));
         }
