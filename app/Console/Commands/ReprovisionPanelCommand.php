@@ -27,6 +27,7 @@ class ReprovisionPanelCommand extends Command
         {panel? : panel id whose accounts must be re-created on its (new) server — omit to list panels}
         {--source= : only this source (free|coin); default both}
         {--only= : limit to these comma-separated config ids (for retrying specific failures)}
+        {--recreate-existing : if the account already exists on the panel (409), delete it then re-create}
         {--notify : DM each user their new subscription link}
         {--execute : actually perform it (default: dry run)}';
 
@@ -83,7 +84,7 @@ class ReprovisionPanelCommand extends Command
                 }
 
                 try {
-                    $issued = $driver->createConfig($spec);
+                    $issued = $this->createOnPanel($driver, $spec);
 
                     $config->update([
                         'remote_identifier' => $issued->identifier ?: $config->remote_identifier,
@@ -141,6 +142,25 @@ class ReprovisionPanelCommand extends Command
         $this->info('اجرا: php artisan configs:reprovision <ID> --notify --execute');
 
         return self::SUCCESS;
+    }
+
+    /**
+     * Create the account on the panel. With --recreate-existing, an "already
+     * exists" (409) is healed by deleting the stale account and creating it fresh.
+     */
+    private function createOnPanel(\App\Panels\Contracts\PanelDriver $driver, ConfigSpec $spec): \App\Panels\Data\IssuedConfig
+    {
+        try {
+            return $driver->createConfig($spec);
+        } catch (\App\Panels\Exceptions\PanelException $e) {
+            if ($this->option('recreate-existing') && ($e->context['status'] ?? null) === 409) {
+                $driver->deleteConfig($spec->identifier);
+
+                return $driver->createConfig($spec);
+            }
+
+            throw $e;
+        }
     }
 
     /** Re-create with the SAME identifier, FULL original quota and the remaining time. */

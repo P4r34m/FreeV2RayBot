@@ -61,6 +61,97 @@ class ReprovisionPanelTest extends TestCase
         $this->assertSame('https://old.example.com/sub/zzzzz', $config->fresh()->subscription_url);
     }
 
+    public function test_recreate_existing_heals_a_409_already_exists(): void
+    {
+        $panel = $this->conflictPanel();
+        $user = BotUser::create(['telegram_id' => 8502]);
+        $config = $user->configs()->create([
+            'panel_id' => $panel->id, 'source' => Config::SOURCE_FREE, 'remote_identifier' => 'fv_8502_x',
+            'subscription_url' => 'https://old.example.com/sub/x', 'status' => ConfigStatus::Active,
+        ]);
+
+        Artisan::call('configs:reprovision', [
+            'panel' => $panel->id, '--only' => (string) $config->id,
+            '--recreate-existing' => true, '--execute' => true,
+        ]);
+
+        // The stale account was deleted and re-created → DB now has the new link.
+        $this->assertSame('https://new.example.com/sub/fv_8502_x', $config->fresh()->subscription_url);
+    }
+
+    public function test_409_without_recreate_existing_leaves_the_config_unchanged(): void
+    {
+        $panel = $this->conflictPanel();
+        $user = BotUser::create(['telegram_id' => 8503]);
+        $config = $user->configs()->create([
+            'panel_id' => $panel->id, 'source' => Config::SOURCE_FREE, 'remote_identifier' => 'fv_8503_y',
+            'subscription_url' => 'https://old.example.com/sub/y', 'status' => ConfigStatus::Active,
+        ]);
+
+        Artisan::call('configs:reprovision', [
+            'panel' => $panel->id, '--only' => (string) $config->id, '--execute' => true,
+        ]);
+
+        $this->assertSame('https://old.example.com/sub/y', $config->fresh()->subscription_url);
+    }
+
+    /** A panel that 409s on create until the account is deleted, then succeeds. */
+    private function conflictPanel(): Panel
+    {
+        $panel = Panel::create([
+            'name' => 'C', 'type' => PanelType::PasarGuard, 'base_url' => 'https://new.example.com', 'is_active' => true,
+        ]);
+
+        $driver = new class($panel) implements PanelDriver
+        {
+            private bool $deleted = false;
+
+            public function __construct(private Panel $panel) {}
+
+            public function panel(): Panel { return $this->panel; }
+
+            public function testConnection(): bool { return true; }
+
+            public function createConfig(ConfigSpec $spec): IssuedConfig
+            {
+                if (! $this->deleted) {
+                    throw new \App\Panels\Exceptions\PanelException('PasarGuard user creation failed.', ['status' => 409, 'body' => '{"detail":"User already exists"}']);
+                }
+
+                return new IssuedConfig(
+                    identifier: $spec->identifier,
+                    subscriptionUrl: 'https://new.example.com/sub/'.$spec->identifier,
+                    dataLimitBytes: $spec->dataLimitBytes,
+                );
+            }
+
+            public function renewConfig(string $identifier, ConfigSpec $spec): IssuedConfig { return new IssuedConfig(identifier: $identifier); }
+
+            public function getUsage(string $identifier): ?ConfigUsage { return null; }
+
+            public function listTargets(): array { return []; }
+
+            public function disableConfig(string $identifier): bool { return true; }
+
+            public function deleteConfig(string $identifier): bool { $this->deleted = true; return true; }
+
+            public function rotateSubscription(string $identifier): IssuedConfig { return new IssuedConfig(identifier: $identifier); }
+
+            public function fetchConfigLinks(string $identifier): array { return []; }
+        };
+
+        $manager = new class($driver) extends PanelManager
+        {
+            public function __construct(private PanelDriver $fake) {}
+
+            public function driver(Panel $panel): PanelDriver { return $this->fake; }
+        };
+
+        $this->app->instance(PanelManager::class, $manager);
+
+        return $panel;
+    }
+
     private function fakePanel(): Panel
     {
         $panel = Panel::create([
