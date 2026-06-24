@@ -26,6 +26,7 @@ class ReprovisionPanelCommand extends Command
     protected $signature = 'configs:reprovision
         {panel? : panel id whose accounts must be re-created on its (new) server — omit to list panels}
         {--source= : only this source (free|coin); default both}
+        {--only= : limit to these comma-separated config ids (for retrying specific failures)}
         {--notify : DM each user their new subscription link}
         {--execute : actually perform it (default: dry run)}';
 
@@ -55,6 +56,11 @@ class ReprovisionPanelCommand extends Command
 
         if (in_array($source, [Config::SOURCE_FREE, Config::SOURCE_COIN], true)) {
             $query->where('source', $source);
+        }
+
+        if ($only = $this->option('only')) {
+            $ids = array_filter(array_map('intval', explode(',', $only)));
+            $query->whereIn('id', $ids);
         }
 
         $total = (clone $query)->count();
@@ -100,7 +106,12 @@ class ReprovisionPanelCommand extends Command
                     $ok++;
                 } catch (Throwable $e) {
                     $fail++;
-                    $this->error("  failed #{$config->id} (".$config->remote_identifier.'): '.$e->getMessage());
+                    $detail = '';
+                    if ($e instanceof \App\Panels\Exceptions\PanelException) {
+                        $detail = ' [status='.($e->context['status'] ?? '?').'] body='
+                            .\Illuminate\Support\Str::limit((string) ($e->context['body'] ?? ''), 300);
+                    }
+                    $this->error("  failed #{$config->id} (".$config->remote_identifier.'): '.$e->getMessage().$detail);
                 }
             }
         });
