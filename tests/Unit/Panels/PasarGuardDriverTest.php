@@ -89,6 +89,30 @@ class PasarGuardDriverTest extends TestCase
         $this->assertSame(1_900_000_000, $issued->expiresAt?->getTimestamp());
     }
 
+    public function test_assign_groups_sends_only_group_ids_via_partial_put(): void
+    {
+        Http::fake([
+            self::BASE_URL.'/api/admin/token' => Http::response(['access_token' => 'tok-123']),
+            self::BASE_URL.'/api/user/alice' => Http::response(['username' => 'alice'], 200),
+        ]);
+
+        $driver = new PasarGuardDriver($this->panel());
+
+        $this->assertTrue($driver->assignGroups('alice', [30]));
+
+        // A partial PUT: only group_ids — never the limit/expiry (usage preserved).
+        Http::assertSent(function ($request) {
+            if ($request->url() !== self::BASE_URL.'/api/user/alice' || $request->method() !== 'PUT') {
+                return false;
+            }
+            $body = $request->data();
+
+            return $body['group_ids'] === [30]
+                && ! array_key_exists('data_limit', $body)
+                && ! array_key_exists('expire', $body);
+        });
+    }
+
     public function test_create_config_sends_empty_proxy_protocols_as_json_objects_not_arrays(): void
     {
         Http::fake([

@@ -145,6 +145,27 @@ final class PasarGuardDriver extends AbstractPanelDriver
         }
     }
 
+    /**
+     * Reassign which groups (inbounds) a user belongs to, WITHOUT touching their
+     * traffic/limit/expiry — PasarGuard accepts a partial PUT body.
+     *
+     * @param  list<int|string>  $groupIds
+     */
+    public function assignGroups(string $identifier, array $groupIds): bool
+    {
+        $username = $this->normalizeIdentifier($identifier);
+
+        $response = $this->request('put', "/api/user/{$username}", [
+            'group_ids' => array_values(array_map('intval', $groupIds)),
+        ]);
+
+        if (! $response->successful()) {
+            $this->fail('PasarGuard group reassignment failed.', $this->errorContext($response, ['username' => $username]));
+        }
+
+        return true;
+    }
+
     public function disableConfig(string $identifier): bool
     {
         $username = $this->normalizeIdentifier($identifier);
