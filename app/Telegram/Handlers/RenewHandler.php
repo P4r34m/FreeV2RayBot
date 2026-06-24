@@ -2,10 +2,8 @@
 
 namespace App\Telegram\Handlers;
 
-use App\Enums\ConfigStatus;
 use App\Jobs\IssueConfigJob;
 use App\Models\BotUser;
-use App\Models\Config;
 use App\Telegram\ChannelGate;
 use App\Telegram\Content;
 use App\Telegram\Keyboards;
@@ -25,11 +23,9 @@ class RenewHandler
 
         /** @var BotUser $user */
         $user = $bot->get('botUser');
-        $config = $user->configs()
-            ->where('status', ConfigStatus::Active->value)
-            ->where('source', Config::SOURCE_FREE)
-            ->latest()
-            ->first();
+        // The free config to renew — active OR already expired (the expiry cron
+        // flips it to Expired, but it's still the same config to renew).
+        $config = $user->freeConfig();
 
         if (! $config) {
             Reply::screen(

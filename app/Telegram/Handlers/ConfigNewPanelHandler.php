@@ -2,7 +2,6 @@
 
 namespace App\Telegram\Handlers;
 
-use App\Enums\ConfigStatus;
 use App\Models\BotUser;
 use App\Services\PanelSelector;
 use App\Telegram\ChannelGate;
@@ -25,12 +24,9 @@ class ConfigNewPanelHandler
         /** @var BotUser $user */
         $user = $bot->get('botUser');
 
-        $hasRunningFree = $user->configs()
-            ->where('status', ConfigStatus::Active->value)
-            ->where('source', \App\Models\Config::SOURCE_FREE)
-            ->where(fn ($q) => $q->whereNull('expires_at')->orWhere('expires_at', '>', now()))
-            ->exists();
-        if ($hasRunningFree) {
+        // A user who already has a free config (active or expired) can't make a new
+        // one — only renew. Guards a stale picker tap from slipping through.
+        if ($user->freeConfig() !== null) {
             Reply::screen($bot, Content::text('config.free_not_expired'), Keyboards::configMenu(true));
 
             return;

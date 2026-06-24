@@ -197,11 +197,14 @@ class Keyboards
         return $kb;
     }
 
-    /** Choose between a brand-new config and renewing the existing one. */
+    /**
+     * Menu for a user who already has a free config: renew + status (NO "new" — a
+     * user gets a single free config and can only renew it). $hasActive is false
+     * only when there's nothing to act on, so just the back button is shown.
+     */
     public static function configMenu(bool $hasActive): InlineKeyboardMarkup
     {
-        $kb = InlineKeyboardMarkup::make()
-            ->addRow(Content::button('config.new', self::CB_CONFIG_NEW));
+        $kb = InlineKeyboardMarkup::make();
 
         if ($hasActive) {
             $kb->addRow(Content::button('config.renew', self::CB_CONFIG_RENEW));

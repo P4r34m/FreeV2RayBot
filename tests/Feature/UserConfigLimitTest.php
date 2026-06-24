@@ -14,8 +14,9 @@ use SergiX44\Nutgram\Nutgram;
 use Tests\TestCase;
 
 /**
- * Exactly one free config per user: a still-running free config blocks a new one,
- * but once it has expired the user can get a fresh one.
+ * Exactly one free config per user, for life: once a user has a free config —
+ * whether still running OR already expired — they can only RENEW it, never get a
+ * brand-new free config. Coin configs don't count toward this.
  */
 class UserConfigLimitTest extends TestCase
 {
@@ -41,7 +42,7 @@ class UserConfigLimitTest extends TestCase
         Queue::assertNotPushed(IssueConfigJob::class);
     }
 
-    public function test_new_free_config_allowed_once_the_existing_one_has_expired(): void
+    public function test_an_expired_free_config_still_blocks_a_new_one(): void
     {
         Queue::fake();
         $panel = $this->activePanel();
@@ -51,15 +52,16 @@ class UserConfigLimitTest extends TestCase
         $bot->willStartConversation();
         $bot->hearText('/start')->reply();
 
-        // An active but EXPIRED free config must not block a fresh free config.
+        // An EXPIRED free config must NOT let the user get a brand-new free config —
+        // they can only renew the existing one.
         BotUser::firstOrFail()->configs()->create([
             'panel_id' => $panel->id, 'source' => Config::SOURCE_FREE, 'remote_identifier' => 'fv_old',
-            'status' => ConfigStatus::Active, 'expires_at' => now()->subDay(),
+            'status' => ConfigStatus::Expired, 'expires_at' => now()->subDay(),
         ]);
 
         $bot->hearCallbackQueryData('config:new:'.$panel->id)->reply();
 
-        Queue::assertPushed(IssueConfigJob::class);
+        Queue::assertNotPushed(IssueConfigJob::class);
     }
 
     public function test_coin_configs_do_not_block_a_free_config(): void

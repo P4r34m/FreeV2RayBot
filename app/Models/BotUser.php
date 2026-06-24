@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\ConfigStatus;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -51,6 +52,20 @@ class BotUser extends Model
     public function configs(): HasMany
     {
         return $this->hasMany(Config::class);
+    }
+
+    /**
+     * The user's lifetime FREE config (active or expired), or null for someone who
+     * never got one. A user keeps a single free config: once they have one they can
+     * only RENEW it, never get a brand-new free config. Deleted ones don't count.
+     */
+    public function freeConfig(): ?Config
+    {
+        return $this->configs()
+            ->where('source', Config::SOURCE_FREE)
+            ->whereIn('status', [ConfigStatus::Active->value, ConfigStatus::Expired->value])
+            ->latest()
+            ->first();
     }
 
     /** The currently usable config, if any. */

@@ -2,7 +2,6 @@
 
 namespace App\Telegram\Handlers;
 
-use App\Enums\ConfigStatus;
 use App\Models\BotUser;
 use App\Telegram\ChannelGate;
 use App\Telegram\Content;
@@ -24,14 +23,9 @@ class GetConfigHandler
         /** @var BotUser $user */
         $user = $bot->get('botUser');
 
-        // With an active FREE config, offer the new/renew/status menu. With none,
-        // skip straight to choosing a server for the free config.
-        $hasActiveFree = $user->configs()
-            ->where('status', ConfigStatus::Active->value)
-            ->where('source', \App\Models\Config::SOURCE_FREE)
-            ->exists();
-
-        if ($hasActiveFree) {
+        // Already has a free config (active or expired)? Then only renew/status —
+        // no brand-new free config. First-timers go straight to the server picker.
+        if ($user->freeConfig() !== null) {
             Reply::screen($bot, Content::text('config.menu_active'), Keyboards::configMenu(true));
 
             return;

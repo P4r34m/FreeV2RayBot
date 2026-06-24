@@ -2,7 +2,6 @@
 
 namespace App\Telegram\Handlers;
 
-use App\Enums\ConfigStatus;
 use App\Jobs\IssueConfigJob;
 use App\Models\BotUser;
 use App\Services\PanelSelector;
@@ -37,15 +36,9 @@ class IssueNewHandler
      */
     public static function start(Nutgram $bot, BotUser $user): void
     {
-        // Exactly ONE free config per user (not configurable). A still-running
-        // free config blocks a new one until its time is up; coin configs don't count.
-        $hasRunningFree = $user->configs()
-            ->where('status', ConfigStatus::Active->value)
-            ->where('source', \App\Models\Config::SOURCE_FREE)
-            ->where(fn ($q) => $q->whereNull('expires_at')->orWhere('expires_at', '>', now()))
-            ->exists();
-
-        if ($hasRunningFree) {
+        // Exactly ONE free config per user, for life. Once they have one (active OR
+        // expired) they can only RENEW it — never get a brand-new free config.
+        if ($user->freeConfig() !== null) {
             Reply::screen(
                 $bot,
                 Content::text('config.free_not_expired'),
