@@ -7,6 +7,7 @@ use App\Models\Config;
 use App\Models\Panel;
 use App\Panels\Data\ConfigSpec;
 use App\Panels\PanelManager;
+use App\Telegram\Content;
 use App\Telegram\Keyboards;
 use App\Telegram\Presenter;
 use Illuminate\Console\Command;
@@ -131,7 +132,7 @@ class ReprovisionPanelCommand extends Command
     {
         try {
             app(Nutgram::class)->sendMessage(
-                text: Presenter::configCaption($config),
+                text: Content::text('config.reprovision_notice')."\n\n".Presenter::configCaption($config),
                 chat_id: $config->botUser->telegram_id,
                 parse_mode: 'HTML',
                 disable_web_page_preview: true,
