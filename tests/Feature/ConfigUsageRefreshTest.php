@@ -65,6 +65,29 @@ class ConfigUsageRefreshTest extends TestCase
         $this->assertSame(ConfigStatus::Active, $fresh->status);
     }
 
+    public function test_refresh_keeps_config_when_missing_but_delete_disallowed(): void
+    {
+        $panel = $this->panelReturning(fn () => null);
+        $config = $this->config($panel, []);
+
+        app(ConfigUsageService::class)->refresh($config, allowDelete: false);
+
+        $this->assertSame(ConfigStatus::Active, $config->fresh()->status);
+    }
+
+    public function test_viewing_does_not_delete_config_when_panel_returns_null(): void
+    {
+        // A re-pointed/unreachable panel returns null for every account; opening
+        // "my configs" must NOT wipe the config.
+        $panel = $this->panelReturning(fn () => null);
+        $config = $this->config($panel, []);
+
+        $bot = $this->userBot(8400);
+        $bot->hearCallbackQueryData('config:view:'.$config->id)->reply();
+
+        $this->assertSame(ConfigStatus::Active, $config->fresh()->status);
+    }
+
     public function test_viewing_a_config_refreshes_usage_live(): void
     {
         $panel = $this->panelReturning(fn () => new ConfigUsage(usedBytes: Bytes::fromGb(7), totalBytes: Bytes::fromGb(10)));

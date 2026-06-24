@@ -15,10 +15,12 @@ class ConfigUsageService
 
     /**
      * Refresh one active config from its panel right now. On a panel error the
-     * stored values are kept (graceful); a config that no longer exists on the
-     * panel is marked deleted and its slot freed. Returns the (refreshed) config.
+     * stored values are kept (graceful). A config missing on the panel is marked
+     * deleted ONLY when $allowDelete is true — never on a user-facing view, where a
+     * temporarily-unreachable or just-re-pointed panel would otherwise wipe configs
+     * end masse. Returns the (refreshed) config.
      */
-    public function refresh(Config $config): Config
+    public function refresh(Config $config, bool $allowDelete = true): Config
     {
         $config->loadMissing('panel');
 
@@ -35,6 +37,10 @@ class ConfigUsageService
         }
 
         if ($usage === null) {
+            if (! $allowDelete) {
+                return $config; // don't nuke configs from a view (panel may be re-pointed/down)
+            }
+
             // Gone from the panel: mark deleted and free the panel's capacity slot.
             if ($config->panel_id) {
                 Panel::whereKey($config->panel_id)

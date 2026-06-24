@@ -61,6 +61,41 @@ class ReprovisionPanelTest extends TestCase
         $this->assertSame('https://old.example.com/sub/zzzzz', $config->fresh()->subscription_url);
     }
 
+    public function test_status_deleted_recovers_and_reactivates_a_config(): void
+    {
+        $panel = $this->fakePanel();
+        $user = BotUser::create(['telegram_id' => 8504]);
+        $config = $user->configs()->create([
+            'panel_id' => $panel->id, 'source' => Config::SOURCE_COIN, 'remote_identifier' => 'fv_8504_z',
+            'subscription_url' => 'https://old.example.com/sub/z',
+            'data_limit_bytes' => Bytes::fromGb(10), 'status' => ConfigStatus::Deleted, 'expires_at' => now()->addDays(3),
+        ]);
+
+        Artisan::call('configs:reprovision', [
+            'panel' => $panel->id, '--status' => 'deleted', '--execute' => true,
+        ]);
+
+        $fresh = $config->fresh();
+        $this->assertSame(ConfigStatus::Active, $fresh->status);                              // reactivated
+        $this->assertSame('https://new.example.com/sub/fv_8504_z', $fresh->subscription_url); // new link
+    }
+
+    public function test_default_run_ignores_deleted_configs(): void
+    {
+        $panel = $this->fakePanel();
+        $user = BotUser::create(['telegram_id' => 8505]);
+        $config = $user->configs()->create([
+            'panel_id' => $panel->id, 'source' => Config::SOURCE_COIN, 'remote_identifier' => 'fv_8505_w',
+            'subscription_url' => 'https://old.example.com/sub/w',
+            'data_limit_bytes' => Bytes::fromGb(10), 'status' => ConfigStatus::Deleted,
+        ]);
+
+        Artisan::call('configs:reprovision', ['panel' => $panel->id, '--execute' => true]); // default: active only
+
+        $this->assertSame('https://old.example.com/sub/w', $config->fresh()->subscription_url); // untouched
+        $this->assertSame(ConfigStatus::Deleted, $config->fresh()->status);
+    }
+
     public function test_recreate_existing_heals_a_409_already_exists(): void
     {
         $panel = $this->conflictPanel();

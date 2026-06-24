@@ -26,6 +26,8 @@ class ReprovisionPanelCommand extends Command
     protected $signature = 'configs:reprovision
         {panel? : panel id whose accounts must be re-created on its (new) server — omit to list panels}
         {--source= : only this source (free|coin); default both}
+        {--status=active : which configs to process: active|deleted|all (deleted = recover ones wrongly removed)}
+        {--since= : only configs whose last_synced_at is on/after this date (e.g. 2026-06-20) — scope a recovery}
         {--only= : limit to these comma-separated config ids (for retrying specific failures)}
         {--recreate-existing : if the account already exists on the panel (409), delete it then re-create}
         {--notify : DM each user their new subscription link}
@@ -51,12 +53,22 @@ class ReprovisionPanelCommand extends Command
         $execute = (bool) $this->option('execute');
         $source = $this->option('source');
 
+        $statuses = match ($this->option('status')) {
+            'deleted' => [ConfigStatus::Deleted->value],
+            'all' => [ConfigStatus::Active->value, ConfigStatus::Deleted->value],
+            default => [ConfigStatus::Active->value],
+        };
+
         $query = Config::with('botUser')
             ->where('panel_id', $panel->id)
-            ->where('status', ConfigStatus::Active->value);
+            ->whereIn('status', $statuses);
 
         if (in_array($source, [Config::SOURCE_FREE, Config::SOURCE_COIN], true)) {
             $query->where('source', $source);
+        }
+
+        if ($since = $this->option('since')) {
+            $query->where('last_synced_at', '>=', $since);
         }
 
         if ($only = $this->option('only')) {
@@ -65,7 +77,7 @@ class ReprovisionPanelCommand extends Command
         }
 
         $total = (clone $query)->count();
-        $this->info(($execute ? 'EXEC' : 'DRY-RUN').": re-provisioning {$total} active configs on panel #{$panel->id} ({$panel->name}).");
+        $this->info(($execute ? 'EXEC' : 'DRY-RUN').": re-provisioning {$total} configs (status: ".$this->option('status').") on panel #{$panel->id} ({$panel->name}).");
 
         $driver = $panels->driver($panel);
         $ok = 0;
@@ -77,13 +89,14 @@ class ReprovisionPanelCommand extends Command
                 $spec = $this->specFor($config);
 
                 if (! $execute) {
-                    $this->line("  would re-create #{$config->id} user=".($config->botUser?->telegram_id ?? '?')." id={$config->remote_identifier} limit={$spec->dataLimitBytes} exp={$spec->expirySeconds}s".($spec->onHold ? ' (on-hold)' : ''));
+                    $this->line("  would re-create #{$config->id} [{$config->status->value}] user=".($config->botUser?->telegram_id ?? '?')." id={$config->remote_identifier} src={$config->source} limit={$spec->dataLimitBytes} exp={$spec->expirySeconds}s".($spec->onHold ? ' (on-hold)' : ''));
                     $ok++;
 
                     continue;
                 }
 
                 try {
+                    $wasInactive = $config->status !== ConfigStatus::Active;
                     $issued = $this->createOnPanel($driver, $spec);
 
                     $config->update([
@@ -95,9 +108,16 @@ class ReprovisionPanelCommand extends Command
                         'data_limit_bytes' => $issued->dataLimitBytes ?: $spec->dataLimitBytes,
                         'used_bytes' => 0, // fresh account on the new server
                         'expires_at' => $issued->expiresAt ?? $config->expires_at,
+                        // Recover wrongly-removed configs back to active.
+                        'status' => ConfigStatus::Active,
                         'last_synced_at' => now(),
                         'panel_response' => $issued->raw ?: $config->panel_response,
                     ]);
+
+                    // Reviving a deleted config re-occupies a slot on the panel.
+                    if ($wasInactive) {
+                        $panel->increment('active_config_count');
+                    }
 
                     if ($this->option('notify') && $config->botUser) {
                         $this->notify($config->fresh(['botUser']));

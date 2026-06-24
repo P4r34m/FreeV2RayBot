@@ -26,8 +26,10 @@ class ConfigViewHandler
         $config = $user->configs()->whereKey((int) $id)->with(['panel', 'plan'])->first();
 
         // Pull fresh usage/remaining/expiry straight from the panel at view time.
+        // allowDelete:false — a view must never delete a config (e.g. if the panel
+        // is momentarily unreachable or was just re-pointed to a new server).
         if ($config) {
-            $config = app(\App\Services\ConfigUsageService::class)->refresh($config);
+            $config = app(\App\Services\ConfigUsageService::class)->refresh($config, allowDelete: false);
         }
 
         self::render($bot, $config);
