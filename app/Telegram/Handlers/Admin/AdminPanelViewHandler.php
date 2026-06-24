@@ -40,6 +40,7 @@ class AdminPanelViewHandler
         $lines = [
             '🖥 <b>'.e($panel->name).'</b>',
             '',
+            '🆔 شناسه: <code>'.$panel->id.'</code>',
             'نوع: '.$panel->type->label(),
             'آدرس: <code>'.htmlspecialchars($panel->base_url, ENT_QUOTES).'</code>',
             "وضعیت: {$state}",

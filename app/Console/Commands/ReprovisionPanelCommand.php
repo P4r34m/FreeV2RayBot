@@ -24,7 +24,7 @@ use Throwable;
 class ReprovisionPanelCommand extends Command
 {
     protected $signature = 'configs:reprovision
-        {panel : panel id whose accounts must be re-created on its (new) server}
+        {panel? : panel id whose accounts must be re-created on its (new) server — omit to list panels}
         {--source= : only this source (free|coin); default both}
         {--notify : DM each user their new subscription link}
         {--execute : actually perform it (default: dry run)}';
@@ -33,9 +33,15 @@ class ReprovisionPanelCommand extends Command
 
     public function handle(PanelManager $panels): int
     {
+        // No id given (or an unknown one) → list panels so the admin can find the id.
+        if ($this->argument('panel') === null) {
+            return $this->listPanels();
+        }
+
         $panel = Panel::find((int) $this->argument('panel'));
         if (! $panel) {
-            $this->error('پنل پیدا نشد.');
+            $this->error('پنل با این آیدی پیدا نشد. پنل‌های موجود:');
+            $this->listPanels();
 
             return self::FAILURE;
         }
@@ -100,6 +106,28 @@ class ReprovisionPanelCommand extends Command
         });
 
         $this->info("Done: {$ok} ok, {$fail} failed".($this->option('notify') ? ", {$notified} notified" : '').($execute ? '.' : ' — re-run with --execute to apply.'));
+
+        return self::SUCCESS;
+    }
+
+    /** Print every panel with its id + active-config count so the admin can pick one. */
+    private function listPanels(): int
+    {
+        $rows = Panel::query()->orderBy('id')->get()->map(fn (Panel $p) => [
+            $p->id,
+            $p->name,
+            $p->base_url,
+            Config::where('panel_id', $p->id)->where('status', ConfigStatus::Active->value)->count(),
+        ])->all();
+
+        if ($rows === []) {
+            $this->warn('هیچ پنلی ثبت نشده است.');
+
+            return self::SUCCESS;
+        }
+
+        $this->table(['ID', 'Name', 'Base URL', 'Active configs'], $rows);
+        $this->info('اجرا: php artisan configs:reprovision <ID> --notify --execute');
 
         return self::SUCCESS;
     }
