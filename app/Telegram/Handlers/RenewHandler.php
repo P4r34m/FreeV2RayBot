@@ -35,11 +35,9 @@ class RenewHandler
         $config = $user->freeConfig();
 
         if (! $config) {
-            Reply::screen(
-                $bot,
-                Content::text('config.none_to_renew'),
-                Keyboards::configMenu(false),
-            );
+            // Nothing to renew — they never had a free config, or it was removed
+            // (e.g. the panel deleted it). Don't dead-end them: set up a NEW one.
+            IssueNewHandler::start($bot, $user);
 
             return;
         }

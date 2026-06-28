@@ -123,6 +123,27 @@ class GetConfigFlowTest extends TestCase
         Queue::assertNotPushed(IssueConfigJob::class);
     }
 
+    public function test_renew_with_a_deleted_config_leads_to_a_new_config(): void
+    {
+        Queue::fake();
+        $panel = $this->panel();
+
+        $bot = $this->startedBot();
+        // The panel removed the account, so the cron flipped it to Deleted.
+        BotUser::firstOrFail()->configs()->create([
+            'panel_id' => $panel->id, 'source' => Config::SOURCE_FREE, 'remote_identifier' => 'fv_gone',
+            'status' => ConfigStatus::Deleted, 'expires_at' => now()->subDay(),
+        ]);
+
+        // Tapping renew must not dead-end — it routes to the new-config picker...
+        $bot->hearCallbackQueryData('config:renew')->reply();
+        Queue::assertNotPushed(IssueConfigJob::class);
+
+        // ...and picking the server issues a fresh free config.
+        $bot->hearCallbackQueryData('config:new:'.$panel->id)->reply();
+        Queue::assertPushed(IssueConfigJob::class, fn (IssueConfigJob $job) => $job->mode === 'new');
+    }
+
     private function panel(): Panel
     {
         return Panel::create([
