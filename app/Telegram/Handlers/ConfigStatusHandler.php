@@ -30,7 +30,9 @@ class ConfigStatusHandler
             ->get();
 
         if ($configs->isEmpty()) {
-            Reply::screen($bot, Content::text('account.no_config'), Keyboards::configMenu(false));
+            // Give a working way to GET a config (routes to GetConfigHandler, which
+            // decides new-vs-renew) — not a dead end with only a back button.
+            Reply::screen($bot, Content::text('account.no_config'), Keyboards::single('config.new', Keyboards::CB_GET_CONFIG));
 
             return;
         }
