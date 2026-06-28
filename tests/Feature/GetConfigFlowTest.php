@@ -144,6 +144,27 @@ class GetConfigFlowTest extends TestCase
         Queue::assertPushed(IssueConfigJob::class, fn (IssueConfigJob $job) => $job->mode === 'new');
     }
 
+    public function test_get_config_rebuilds_a_deleted_config_seamlessly(): void
+    {
+        Queue::fake();
+        $panel = $this->panel();
+
+        $bot = $this->startedBot();
+        // The panel removed the account, so the cron flipped the row to Deleted.
+        $config = BotUser::firstOrFail()->configs()->create([
+            'panel_id' => $panel->id, 'source' => Config::SOURCE_FREE, 'remote_identifier' => 'fv_gone',
+            'status' => ConfigStatus::Deleted, 'expires_at' => now()->subDay(),
+        ]);
+
+        // Tapping get/renew rebuilds the SAME record on the spot — no picker step.
+        $bot->hearCallbackQueryData('get_config')->reply();
+
+        Queue::assertPushed(
+            IssueConfigJob::class,
+            fn (IssueConfigJob $job) => $job->mode === 'renew' && $job->configId === $config->id,
+        );
+    }
+
     private function panel(): Panel
     {
         return Panel::create([
