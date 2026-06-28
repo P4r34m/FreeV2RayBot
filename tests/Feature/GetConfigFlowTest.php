@@ -165,6 +165,26 @@ class GetConfigFlowTest extends TestCase
         );
     }
 
+    public function test_get_config_rebuilds_any_non_active_config_seamlessly(): void
+    {
+        Queue::fake();
+        $panel = $this->panel();
+
+        $bot = $this->startedBot();
+        // Not active for ANY reason (here: disabled, not even expired) → still rebuilt.
+        $config = BotUser::firstOrFail()->configs()->create([
+            'panel_id' => $panel->id, 'source' => Config::SOURCE_FREE, 'remote_identifier' => 'fv_dis',
+            'status' => ConfigStatus::Disabled, 'expires_at' => now()->addDays(2),
+        ]);
+
+        $bot->hearCallbackQueryData('get_config')->reply();
+
+        Queue::assertPushed(
+            IssueConfigJob::class,
+            fn (IssueConfigJob $job) => $job->mode === 'renew' && $job->configId === $config->id,
+        );
+    }
+
     private function panel(): Panel
     {
         return Panel::create([

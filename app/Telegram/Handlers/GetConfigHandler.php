@@ -26,30 +26,30 @@ class GetConfigHandler
         /** @var BotUser $user */
         $user = $bot->get('botUser');
 
-        // Already has a live free config (active or expired)? Then only renew/status —
-        // no brand-new free config.
-        if ($user->freeConfig() !== null) {
+        // The user's most recent free config, whatever state it's in.
+        $config = $user->configs()
+            ->where('source', Config::SOURCE_FREE)
+            ->latest()
+            ->first();
+
+        // True first-timer → server picker.
+        if (! $config) {
+            IssueNewHandler::start($bot, $user);
+
+            return;
+        }
+
+        // A genuinely working config (active & not expired) → renew/status menu only;
+        // a single free config that can't be re-issued early.
+        if ($config->status === ConfigStatus::Active && ! $config->isExpired()) {
             Reply::screen($bot, Content::text('config.menu_active'), Keyboards::configMenu(true));
 
             return;
         }
 
-        // Had a free config that was removed from the panel (status Deleted)? Rebuild
-        // it on the spot — same record/identifier, no "you have nothing"/picker steps.
-        $removed = $user->configs()
-            ->where('source', Config::SOURCE_FREE)
-            ->where('status', ConfigStatus::Deleted->value)
-            ->latest()
-            ->first();
-
-        if ($removed) {
-            Reply::screen($bot, Content::text('config.creating'), Keyboards::backMenu());
-            IssueConfigJob::dispatch($user->telegram_id, (int) $bot->chatId(), 'renew', $removed->id);
-
-            return;
-        }
-
-        // True first-timer → server picker.
-        IssueNewHandler::start($bot, $user);
+        // Anything else — expired, deleted, disabled, failed — rebuild it on the spot
+        // (renew the SAME record; the driver recreates it if it's gone from the panel).
+        Reply::screen($bot, Content::text('config.creating'), Keyboards::backMenu());
+        IssueConfigJob::dispatch($user->telegram_id, (int) $bot->chatId(), 'renew', $config->id);
     }
 }
