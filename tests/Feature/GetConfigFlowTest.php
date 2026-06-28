@@ -185,6 +185,27 @@ class GetConfigFlowTest extends TestCase
         );
     }
 
+    public function test_get_config_with_a_failed_config_starts_a_fresh_issuance(): void
+    {
+        Queue::fake();
+        $panel = $this->panel();
+
+        $bot = $this->startedBot();
+        // A Failed row (issuance never completed) → don't renew the dead record.
+        BotUser::firstOrFail()->configs()->create([
+            'panel_id' => $panel->id, 'source' => Config::SOURCE_FREE, 'remote_identifier' => 'fv_failed',
+            'status' => ConfigStatus::Failed,
+        ]);
+
+        // get_config → server picker (new), not a renew of the junk row.
+        $bot->hearCallbackQueryData('get_config')->reply();
+        Queue::assertNotPushed(IssueConfigJob::class);
+
+        // Picking a server issues a brand-new config.
+        $bot->hearCallbackQueryData('config:new:'.$panel->id)->reply();
+        Queue::assertPushed(IssueConfigJob::class, fn (IssueConfigJob $job) => $job->mode === 'new');
+    }
+
     private function panel(): Panel
     {
         return Panel::create([

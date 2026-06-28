@@ -61,6 +61,30 @@ class ReprovisionPanelTest extends TestCase
         $this->assertSame('https://old.example.com/sub/zzzzz', $config->fresh()->subscription_url);
     }
 
+    public function test_renew_reprovisions_on_a_new_panel_when_the_old_one_is_gone(): void
+    {
+        $live = $this->fakePanel(); // the live panel + fake driver bound
+        $old = Panel::create([
+            'name' => 'old', 'type' => PanelType::PasarGuard, 'base_url' => 'https://old.example.com', 'is_active' => false,
+        ]);
+
+        $user = BotUser::create(['telegram_id' => 8600]);
+        $config = $user->configs()->create([
+            'panel_id' => $old->id, 'source' => Config::SOURCE_FREE, 'remote_identifier' => 'fv_orphan',
+            'data_limit_bytes' => Bytes::fromGb(10), 'status' => ConfigStatus::Active, 'expires_at' => now()->subDay(),
+        ]);
+
+        // The old panel row is removed entirely → config.panel_id becomes null.
+        $old->delete();
+
+        app(\App\Services\ConfigIssuanceService::class)->renew($config->fresh());
+
+        $fresh = $config->fresh();
+        $this->assertSame($live->id, $fresh->panel_id);                           // moved to the live panel
+        $this->assertStringContainsString('new.example.com', (string) $fresh->subscription_url);
+        $this->assertSame(ConfigStatus::Active, $fresh->status);
+    }
+
     public function test_status_deleted_recovers_and_reactivates_a_config(): void
     {
         $panel = $this->fakePanel();

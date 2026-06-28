@@ -179,6 +179,11 @@ final class PasarGuardDriver extends AbstractPanelDriver
 
         $response = $this->request('put', "/api/user/{$username}", ['status' => 'disabled']);
 
+        // Already gone from the panel → nothing to disable (idempotent, like delete).
+        if ($response->status() === 404) {
+            return true;
+        }
+
         if (! $response->successful()) {
             $this->fail('PasarGuard disable failed.', $this->errorContext($response, ['username' => $username]));
         }

@@ -47,8 +47,16 @@ class GetConfigHandler
             return;
         }
 
-        // Anything else — expired, deleted, disabled, failed — rebuild it on the spot
-        // (renew the SAME record; the driver recreates it if it's gone from the panel).
+        // A Failed row never finished issuing (no usable account/identifier) → issue a
+        // fresh one instead of trying to renew a dead record.
+        if ($config->status === ConfigStatus::Failed) {
+            IssueNewHandler::start($bot, $user);
+
+            return;
+        }
+
+        // Expired / deleted / disabled → rebuild it on the spot (renew the SAME record;
+        // the driver recreates it if it's gone from the panel).
         Reply::screen($bot, Content::text('config.creating'), Keyboards::backMenu());
         IssueConfigJob::dispatch($user->telegram_id, (int) $bot->chatId(), 'renew', $config->id);
     }

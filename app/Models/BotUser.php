@@ -63,7 +63,14 @@ class BotUser extends Model
     {
         return $this->configs()
             ->where('source', Config::SOURCE_FREE)
-            ->whereIn('status', [ConfigStatus::Active->value, ConfigStatus::Expired->value])
+            // Active / expired / disabled all count as "has a free config" → renew it,
+            // never mint a second one. Deleted & Failed are excluded so the user can
+            // get a fresh issuance (a Failed row has no usable account/identifier).
+            ->whereIn('status', [
+                ConfigStatus::Active->value,
+                ConfigStatus::Expired->value,
+                ConfigStatus::Disabled->value,
+            ])
             ->latest()
             ->first();
     }

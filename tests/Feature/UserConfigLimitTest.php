@@ -64,6 +64,27 @@ class UserConfigLimitTest extends TestCase
         Queue::assertNotPushed(IssueConfigJob::class);
     }
 
+    public function test_a_disabled_free_config_also_blocks_a_new_one(): void
+    {
+        Queue::fake();
+        $panel = $this->activePanel();
+
+        /** @var Nutgram $bot */
+        $bot = app(Nutgram::class);
+        $bot->willStartConversation();
+        $bot->hearText('/start')->reply();
+
+        // A disabled free config still counts — the user renews it, not gets a 2nd.
+        BotUser::firstOrFail()->configs()->create([
+            'panel_id' => $panel->id, 'source' => Config::SOURCE_FREE, 'remote_identifier' => 'fv_dis',
+            'status' => ConfigStatus::Disabled,
+        ]);
+
+        $bot->hearCallbackQueryData('config:new:'.$panel->id)->reply();
+
+        Queue::assertNotPushed(IssueConfigJob::class);
+    }
+
     public function test_coin_configs_do_not_block_a_free_config(): void
     {
         Queue::fake();

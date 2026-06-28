@@ -99,8 +99,10 @@ class ConfigIssuanceService
     {
         $config->loadMissing('panel');
 
+        // The config's panel was removed entirely (not just re-pointed) → re-provision
+        // the SAME row on a freshly-selected panel instead of dead-ending the user.
         if (! $config->panel) {
-            throw new NoPanelAvailableException('سرور این کانفیگ دیگر در دسترس نیست.');
+            return $this->reprovisionOnNewPanel($config, $plan);
         }
 
         // Plan precedence: an explicit plan, else the config's own plan, else the
@@ -128,6 +130,48 @@ class ConfigIssuanceService
                 'panel_response' => $issued->raw ?: $config->panel_response,
             ]);
 
+            $this->consumeWallet($user, $bonusBytes, $bonusDays);
+
+            return $config->refresh();
+        });
+    }
+
+    /**
+     * Re-issue an existing config row on a newly-selected panel (its old panel was
+     * deleted). Keeps the same DB row + user; mints a fresh account on the new panel.
+     */
+    private function reprovisionOnNewPanel(Config $config, ?Plan $plan): Config
+    {
+        $panel = $this->selector->select($plan ?? Plan::default());
+
+        if (! $panel) {
+            throw new NoPanelAvailableException('هیچ سرور فعالی برای ساخت کانفیگ در دسترس نیست.');
+        }
+
+        $plan ??= $this->planForPanel($panel);
+        $user = $config->botUser;
+        [$spec, $bonusBytes, $bonusDays] = $this->buildSpec($user, $plan, $config->remote_identifier, resetUsage: true);
+
+        $issued = $this->panels->driver($panel)->createConfig($spec);
+
+        return DB::transaction(function () use ($config, $panel, $plan, $issued, $spec, $bonusBytes, $bonusDays, $user) {
+            $config->update([
+                'panel_id' => $panel->id,
+                'plan_id' => $plan?->id,
+                'remote_identifier' => $issued->identifier,
+                'remote_uuid' => $issued->remoteUuid,
+                'sub_id' => $issued->subId,
+                'subscription_url' => $issued->subscriptionUrl,
+                'config_links' => $issued->configLinks ?: null,
+                'data_limit_bytes' => $issued->dataLimitBytes ?: $spec->dataLimitBytes,
+                'used_bytes' => 0,
+                'expires_at' => $issued->expiresAt,
+                'status' => ConfigStatus::Active,
+                'last_synced_at' => now(),
+                'panel_response' => $issued->raw ?: null,
+            ]);
+
+            $panel->increment('active_config_count');
             $this->consumeWallet($user, $bonusBytes, $bonusDays);
 
             return $config->refresh();
